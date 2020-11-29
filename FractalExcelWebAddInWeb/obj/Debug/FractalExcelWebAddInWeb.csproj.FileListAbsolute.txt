@@ -1,0 +1,17 @@
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\FractalExcelWebAddInWeb.dll.config
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\FractalExcelWebAddInWeb.dll
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\FractalExcelWebAddInWeb.pdb
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\csc.exe.config
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\csc.rsp
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\csi.exe.config
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\csi.rsp
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\Microsoft.CSharp.Core.targets
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\Microsoft.Managed.Core.targets
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\Microsoft.VisualBasic.Core.targets
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\vbc.exe.config
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\vbc.rsp
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\bin\roslyn\VBCSCompiler.exe.config
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\obj\Debug\FractalExcelWebAddInWeb.csprojAssemblyReference.cache
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\obj\Debug\FractalExcelWebAddInWeb.dll
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\obj\Debug\FractalExcelWebAddInWeb.pdb
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddInWeb\obj\Debug\FractalExcelWebAddInWeb.csproj.CoreCompileInputs.cache
