@@ -1147,6 +1147,7 @@ function calcSite() {
                                     windCapacity = inputs["Wind capacity"];
 
                                     // Start simulation
+                                    var startSimulation = performance.now();
                                     var year = 1;
                                     var solarMPP_l0 = new Array(numTimestamps).fill([0]);
                                     var solarAC_l1 = new Array(numTimestamps).fill([0]);
@@ -1208,9 +1209,10 @@ function calcSite() {
                                     outDataTable.values = dataTableValues;
 
                                     // End simulation
-                                    endSimulation = performance.now();
+                                    var endSimulation = performance.now();
                                     // Print output
                                     console.log("Simulation complete!");
+                                    console.log((Math.round((endSimulation - startSimulation))).toString() + " ms")
                                     
                                     return [2 /*return*/];
                             }
