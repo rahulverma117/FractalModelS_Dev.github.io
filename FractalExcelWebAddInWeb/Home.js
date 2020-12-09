@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     "use strict";
 
     var cellToHighlight;
@@ -89,7 +89,7 @@ async function calcProjectLife() {
     });
 }
 
-function simulateYear(year, pars, time, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
+function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
     appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
     wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
     monTable1, monTable2, monTable3) {
@@ -249,6 +249,7 @@ function simulateYear(year, pars, time, solar_l0, solar_l1, wind_l1, load_l3, ap
     var windXfmrEff = new Array(numTimestamps).fill([0]);
     var avgAvailableCapacity = new Array(numTimestamps).fill([0]);
     var blank = new Array(numTimestamps).fill([""]);
+    var test8760 = new Array(numTimestamps).fill([0]);
     // Define monthly output variables
     var monSolarOnly_l3 = new Array(12).fill(0);
     var monSolarOnly_l2 = new Array(12).fill(0);
@@ -296,16 +297,19 @@ function simulateYear(year, pars, time, solar_l0, solar_l1, wind_l1, load_l3, ap
     // Simulate standalone generation and clipping loses
     for (i = 0; i < numTimestamps; i++) {
         var vNow = excelDateToJSDate(time.values[i]);
-        var vMonth = vNow.getUTCMonth() + 1;
-        var vHour = vNow.getUTCHours();
+        var vMonth = monthSeries.values[i];
+        var vHour = hourSeries.values[i];
         var vDay = vNow.getUTCDay();
         var vWeekend = vDay == 0 || vDay == 6;
         var diff = vNow - start;
         var oneDay = 1000 * 60 * 60 * 24;
         var day = Math.floor(diff / oneDay) + 1;
+        // Remove daylight savings
+        
         dayOfYear[i] = [day];
         var vUseCaseCode = dispatchTable.values[vMonth - 1][vHour];
         useCaseCodes[i] = [vUseCaseCode];
+        test8760[i] = [vNow]
         // Get Solar PPA price
         if (solarPPAFixed) {
             var vSolarPPA = solarPPAPrice;
@@ -513,8 +517,8 @@ function simulateYear(year, pars, time, solar_l0, solar_l1, wind_l1, load_l3, ap
     for (i = 0; i < numTimestamps; i++) {
         // Get time
         var now = excelDateToJSDate(time.values[i]);
-        var month = now.getUTCMonth() + 1;
-        var hour = now.getUTCHours();
+        var month = monthSeries.values[i];
+        var hour = hourSeries.values[i];
         var day = now.getUTCDay();
         var weekend = day == 0 || day == 6;
         if (battEnabled) {
@@ -1024,7 +1028,7 @@ function simulateYear(year, pars, time, solar_l0, solar_l1, wind_l1, load_l3, ap
     monTable1Values[38] = monWindNetClip_l2;
     monTable1Values[39] = monAutoChaWind;
 
-    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, socHS, solarAC_l3, windAC_l3, battMaxDisCap]);
+    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, socHS, solarAC_l3, windAC_l3, test8760]);
     
     return [dataTableValues, monTable1Values, monBESSEneRev, monBESSCapRev]
     /*
@@ -1068,8 +1072,12 @@ function calcSite() {
                                     baseWind_l1.load("values");
                                     baseLoad_l3 = genSheet.getRange("Load8760");
                                     baseLoad_l3.load("values");
-                                    time = genSheet.getRange("Timestamp");
+                                    time = outSheet.getRange("timeStampCalc");
+                                    hourSeries = outSheet.getRange("hourSeries");
+                                    monthSeries = outSheet.getRange("monthSeries");
                                     time.load("values");
+                                    monthSeries.load("values");
+                                    hourSeries.load("values");
                                     appDefTable = appSheet.getRange("applicationDefTable");
                                     appAllDayTable = appSheet.getRange("AllDayAppTable");
                                     ept_wd = appSheet.getRange("energyPriceTable");
@@ -1190,7 +1198,7 @@ function calcSite() {
                                     var wind_l1 = windAC_l1;
                                     var load_l3 = load_l3;
 
-                                    var year1 = simulateYear(year, pars, time, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
+                                    var year1 = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
                                         appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
                                         wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
                                         monTable1, monTable2, monTable3);
@@ -1378,7 +1386,24 @@ function calcBattEff(powerRatio) {
 }
 // Convert Excel date to serial
 function excelDateToJSDate(serial) {
-    return new Date((serial - (25567 + 2 - 0.00000001)) * 86400 * 1000);
+   var utc_days  = Math.floor(serial - 25568);
+   var utc_value = utc_days * 86400;                                        
+   var date_info = new Date(utc_value * 1000);
+
+   var fractional_day = serial - Math.floor(serial) + 0.0000001;
+
+   var total_seconds = Math.floor(86400 * fractional_day);
+
+   var seconds = total_seconds % 60;
+
+   total_seconds -= seconds;
+
+   var hours = Math.floor(total_seconds / (60 * 60) - 6);
+
+   var minutes = Math.floor(total_seconds / 60) % 60;
+
+
+   return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
 }
 
 // Calculate 8760 revenue for a given application as a 2D lis
