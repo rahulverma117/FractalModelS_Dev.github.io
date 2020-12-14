@@ -214,6 +214,8 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     var battDisPOI_l3 = new Array(numTimestamps).fill([0]);
     var battMaxDisCap = new Array(numTimestamps).fill([0]);
     var battChaPOI_l3 = new Array(numTimestamps).fill([0]);
+    var solarPPADis_l3 = new Array(numTimestamps).fill([0]);
+    var windPPADis_l3 = new Array(numTimestamps).fill([0]);
     // var annualOut = new Array(outputAnnualSummary.values.length).fill([0]);
     var dayOfYear = new Array(numTimestamps).fill([0]);
     var solarMPP_l0 = new Array(numTimestamps).fill([0]);
@@ -293,6 +295,8 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     var monWindNetRev = new Array(12).fill(0);
     var monBESSEneRev = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]];
     var monBESSCapRev = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]];
+    var monBESSSolarPPAEne = new Array(12).fill(0);
+    var monBESSWindPPAEne = new Array(12).fill(0);
 
     // Simulate standalone generation and clipping loses
     for (i = 0; i < numTimestamps; i++) {
@@ -309,7 +313,6 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
         dayOfYear[i] = [day];
         var vUseCaseCode = dispatchTable.values[vMonth - 1][vHour];
         useCaseCodes[i] = [vUseCaseCode];
-        test8760[i] = [vNow]
         // Get Solar PPA price
         if (solarPPAFixed) {
             var vSolarPPA = solarPPAPrice;
@@ -548,9 +551,9 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
             vGeneration = solarAC_l3[i][0] + windAC_l3[i][0];
             vPOILimit = poiLimitArray[i][0];
             if (ac) {
-                var vCapLimit = Math.max(0, vPOILimit - vGeneration)
+                var vCapLimit = Math.min(battPowerPOI, Math.max(0, vPOILimit - vGeneration));
             } else {
-                var vCapLimit = Math.max(0, solarInverterCapacity - solarAC_l1[i]);
+                var vCapLimit = Math.min(battPowerPOI, Math.max(0, solarInverterCapacity - solarAC_l1[i]));
             }
             // Update batter capacity
             battMaxDisCap[i] = [vCapLimit]; // Output
@@ -604,10 +607,10 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                     if (weekend) {
                         var vCapPrice = cpt_we.values[month - 1 + (aAppCodes[j] - 1) * 12][hour];
                         if (aAppPriceSrc[j] == "Solar PPA") {
-                            var vEnePrice = solarPPA[i][0];
+                            var vEnePrice = 0; //solarPPA[i][0];
                         }
                         else if (aAppPriceSrc[j] == "Wind PPA") {
-                            var vEnePrice = windPPA[i][0];
+                            var vEnePrice = 0; //windPPA[i][0];
                         }
                         else {
                             var vEnePrice = ept_we.values[month - 1 + (aAppCodes[j] - 1) * 12][hour];
@@ -616,10 +619,10 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                     else {
                         vCapPrice = cpt_wd.values[month - 1 + (aAppCodes[j] - 1) * 12][hour];
                         if (aAppPriceSrc[j] == "Solar PPA") {
-                            var vEnePrice = solarPPA[i][0];
+                            var vEnePrice = 0; //solarPPA[i][0];
                         }
                         else if (aAppPriceSrc[j] == "Wind PPA") {
-                            var vEnePrice = windPPA[i][0];
+                            var vEnePrice = 0; //windPPA[i][0];
                         }
                         else {
                             var vEnePrice = ept_wd.values[month - 1 + (aAppCodes[j] - 1) * 12][hour];
@@ -913,13 +916,23 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
             // Convert throughput at l0 to l3
             aAppThr_l3 = convThrl0Tol3(avgDisEff, avgChaEff, aAppThr_l0, aAppThr_l0, poiLimitArray[i][0]);
             appThr_l3[i] = aAppThr_l3;
-
+            var vSolarPPADis_l3 = 0;
+            var vWindPPADis_l3 = 0;
             // Calculate energy revenue / cost
             for (a = 0; a < 5; a++) {
                 if (aAppCodes[a] > 0) {
                     monBESSEneRev[aAppCodes[a] - 1][month - 1] += Math.abs(aAppThr_l3[a]) * aEnePrice[a] / 1000;
+                    if (aAppPriceSrc[a] == "Solar PPA") {
+                        monBESSSolarPPAEne[month - 1] += aAppThr_l3[a];
+                        vSolarPPADis_l3 = aAppThr_l3[a];
+                    } else if (aAppPriceSrc[a] == "Wind PPA"){
+                        monBESSWindPPAEne[month - 1] += aAppThr_l3[a];
+                        vWindPPADis_l3 = aAppThr_l3[a];
+                    }
                 }
             }
+            solarPPADis_l3[i] = [vSolarPPADis_l3 + vNetSolar_l3];
+            windPPADis_l3[i] = [vWindPPADis_l3 + vNetWind_l3];
             // Calculate app throughput at l3
             monSolarNet_l3[month - 1] += vNetSolar_l3;
             monSolarNet_l2[month - 1] += vNetSolar_l2;
@@ -1027,8 +1040,10 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     monTable1Values[37] = monSolarNetClip_l2;
     monTable1Values[38] = monWindNetClip_l2;
     monTable1Values[39] = monAutoChaWind;
+    monTable1Values[40] = monBESSSolarPPAEne;
+    monTable1Values[41] = monBESSWindPPAEne;
 
-    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, socHS, solarAC_l3, windAC_l3, test8760]);
+    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, socHS, solarAC_l3, windAC_l3, battMaxDisCap, solarPPADis_l3, windPPADis_l3]);
     
     return [dataTableValues, monTable1Values, monBESSEneRev, monBESSCapRev]
     /*
