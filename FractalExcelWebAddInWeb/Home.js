@@ -1180,7 +1180,7 @@ function calcSite() {
                                     var solarAC_l1 = new Array(numTimestamps).fill([0]);
                                     var windAC_l1 = new Array(numTimestamps).fill([0]);
                                     var load_l3 = baseLoad_l3.values;
-                                    var projectLife = 5 //Math.max(solarLife, windLife, battLife);
+                                    var projectLife = 1 //Math.max(solarLife, windLife, battLife);
                                     var maxModelLife = 40;
                                     // Calculate generation and battery capacity
                                     for (let year = 1; year <= maxModelLife; year++) {
