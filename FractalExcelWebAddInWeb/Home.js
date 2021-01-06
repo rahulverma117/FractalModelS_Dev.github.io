@@ -92,7 +92,7 @@ async function calcProjectLife() {
 function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
     appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
     wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-    monTable1, monTable2, monTable3) {
+    monTable1, monTable2, monTable3,useCap) {
 
     // Define local variables for par dictionary
     var numTimestamps = solar_l0.length;
@@ -158,6 +158,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     var battDisEff_math = pars["Battery rated discharge efficiency"];
     var battChaEff_math = pars["Battery rated charge efficiency"];
 
+    battEnergy = battEnergy * useCap;
     // Calculate nameplate efficiencies
     var solarLineEff = 1 - solarLineLoss_math;
     var windLineEff = 1 - windLineLoss_math;
@@ -216,6 +217,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     var battChaPOI_l3 = new Array(numTimestamps).fill([0]);
     var solarPPADis_l3 = new Array(numTimestamps).fill([0]);
     var windPPADis_l3 = new Array(numTimestamps).fill([0]);
+    var battChaGenTotal = new Array(numTimestamps).fill([0]);
     // var annualOut = new Array(outputAnnualSummary.values.length).fill([0]);
     var dayOfYear = new Array(numTimestamps).fill([0]);
     var solarMPP_l0 = new Array(numTimestamps).fill([0]);
@@ -577,6 +579,10 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                     if (!usedApps.includes(aAppCodes[j])) {
                         usedApps.push(aAppCodes[j]);
                     }
+                    var capScaleOn = (appDefTable.values[aAppCodes[j]][0] == 1);
+                    if (capScaleOn) {
+                        battCapMulti = useCap;
+                    }
                     var vAppThr_Plan_l0 = appDefTable.values[aAppCodes[j]][7] * appDefTable.values[aAppCodes[j]][6] * aAppCap_Plan[j];
                     aAppThr_Plan_l0[j] = vAppThr_Plan_l0;
                     if (vAppThr_Plan_l0 == 0) {
@@ -801,6 +807,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                 var vPVS_l1 = 0;
                 var vPVS_l2 = 0;
                 var vBattDis_l0 = vDisPower_l0;
+                vChaPower_l0 = vNetChaThr_l0;
                 var vBattNetThr_l0 = vDisPower_l0 + vChaPower_l0;
                 var vBattNetPowerRatio = Math.min(1, Math.abs((vDisPower_l0 + Math.abs(vChaPower_l0)) / 2 / battPower));
                 var vBattInv = calcInverterEff(vBattNetPowerRatio, battInvOverride, battInvOverrideVal);
@@ -819,7 +826,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                 var vBattDis_l2 = vBattDis_l1 * Math.pow(vXfmrEff, battXfmrNum) * battLineEff;
                 var vBattChaGrd_l1 = vNetChaThr_l0 / vBattInv;
                 var vBattChaGrd_l2 = vBattChaGrd_l1 / Math.pow(vXfmrEff, battXfmrNum) / battLineEff;
-                var vSiteOutput_l2 = vWindAC_l2 + vSolarAC_l2 + vACCoupledBattNetThr_l2;
+                var vSiteOutput_l2 = vWindAC_l2 + vSolarAC_l2 + vACCoupledBattNetThr_l2 + (vAutoChargePV_l2 + vAutoChargeWind_l2);
                 if (vSiteOutput_l2 > 0) {
                     var vSitePowerLevel = Math.min(1, Math.abs(vSiteOutput_l2 / poiLimitArray[i][0]));
                     var vXfmrEff_site = calcTransformerEff(vSitePowerLevel, poiXfmrOverride, poiXfmrOverrideVal);
@@ -902,6 +909,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
             netSolarClipMPP_l0[i] = [vNetSolarClip_l0];
             netSolarClipAC_l2[i] = [vNetSolarClip_l2];
             netWindClipAC_l2[i] = [vNetWindClip_l2];
+            battChaGenTotal[i] = [vAutoChargePV_l0 + vAutoChargePV_l2 + vAutoChargeWind_l2];
             // Calculate effective efficiency for BESS throughput between l0 and l3
             if (vBattDis_l3 > 0) {
                 var avgDisEff = vBattDis_l3 / vBattDis_l0;
@@ -1045,9 +1053,9 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     monTable1Values[40] = monBESSSolarPPAEne;
     monTable1Values[41] = monBESSWindPPAEne;
 
-    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, socHS, solarAC_l3, windAC_l3, battMaxDisCap, solarPPADis_l3, windPPADis_l3]);
+    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, battChaGenTotal, socHS, solarAC_l3, windAC_l3, battMaxDisCap, solarPPADis_l3, windPPADis_l3]);
     
-    return [dataTableValues, monTable1Values, monBESSEneRev, monBESSCapRev]
+    return [dataTableValues, monTable1Values, monBESSEneRev, monBESSCapRev, battDisPOI_l3, socHS];
     /*
      * Return array
      * dataTable8760 = data table of 8760 outputs
@@ -1066,7 +1074,7 @@ async function calcSite() {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, Excel.run(function (context) {
                     return __awaiter(_this, void 0, void 0, function () {
-                        var startReading, mode, solarLife, windLife, battLife, inputSheet, genSheet, outSheet, appSheet, battSheet, solarAnnualDeg, windAnnualDeg, dispatchSheet, inputTable, baseSolar_l0, baseSolar_l1, baseWind_l1, baseLoad_l3, time, appDefTable, appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd, wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable, solarPPA, windPPA, sampleOutput, sampleOuput_5, outputAnnualSummary, inputs, i, numTimestamps, solarEnabled, mppEnabled, inverterEnabled, windEnabled, genEnabled, battEnabled, limitedLoad, ac, curtailSrc, curtailSolar, chargeSrc, chargeSolar, chargeWind, chargeSolarPlusWind, poiLineLoss_math, poiLimit, poiXfmrOverride, poiXfmrOverrideVal, poiXfmrNum, solarPPAMethod, windPPAMethod, solarPPAFixed, windPPAFixed, solarPPAPrice, windPPAPrice, fixedPPA, ppaPrice, baseSolar, baseSolarInverter, panelCapacity, solarInverterCapacity, solarXfmrNum, solarLineLoss_math, solarXfmrOverride, solarXfmrOverrideVal, solarInvOverride, solarInvOverrideVal, baseWind, windCapacity, windLineLoss_math, windXfmrNum, windXfmrOverride, windXfmrOverrideVal, battLineLoss_math, battXfmrNum, battPowerPOI, battEnergyPOI, battPower, battEnergy, nConvert, startRatio, fullRenewCharge, buffer, battXfmrOverride, battXfmrOverrideVal, battInvOverride, battInvOverrideVal, battConvOverride, battConvOverrideVal, battDisEffOverride, battDisEffOverrideVal, battChaEffOverride, battChaEffOverrideVal, battDisEff_math, battChaEff_math, solarLineEff, windLineEff, battLineEff, battLineEff, poiLineEff, poiXfmrEff_math, battBOSEff, ratedSolarEff, ratedWindEff, ratedBattEff, ratedBattEff, battChargeEnergy, useCaseCodes, usedApps, ppa, poiLimitArray, siteOutput_l3, netBattPOI_l3, netSolarPOI_l3, netWindPOI_l3, battChaSolarDC_l0, battChaSolarAC_l2, battChaWind_l2, battDisPOI_l3, battChaPOI_l3, annualOut, dayOfYear, start, solarMPP_l0, solarAC_l1, solarAC_l2, solarAC_l3, pvs_DCCoupled_l2, windAC_l1, windAC_l2, windAC_l3, solarClipMPP_l0, solarClipAC_l2, windClipAC_l2, totalClipAC_l2, dayClipAC_l2, dayGenAC_l2, daySolarClipMPP_l0, daySolarMPP_l0, daySolarAC_l2, dayWindAC_l2, daySolarClipAC_l2, dayWindClipAC_l2, solarOnlyInvEff, solarOnlyXfmrEff, pvsInvEff, pvsXfmrEff, windXfmrEff, endReading, i, vNow, vMonth, vHour, vDay, vWeekend, diff, oneDay, day, vUseCaseCode, vPPA, vPPA, vPPA, vPOILimit, vSolarPowerRatio, vWindPowerRatio, vSolarOnlyAC, vWindGen, vMPPGen_l0, vInvEff, vSolarAC_l1, vSolarClipMPP_l0, vMPPGen_l0, vSolarAC_l1, vSolarClipMPP_l0, vXfmrEff, vSolarAC_l2, vWindGen_l1, vXfmrEff, vWindAC_l2, vPotentialSolar_l3, vPotetialWind_l3, vSolarLimit, vWindLimit, vWindLimit, vSolarLimit, vCombinedPowerRatio, vPOIRouteEff, vSolarAC_l3, vWindAC_l3, vSolarClipAC_l2, vWindClipAC_l2, acClipByDay_l2, acGenByDay_l2, dcClipByDay_l0, dcGenByDay_l0, acSolarByDay_l2, acWindByDay_l2, acWindClipByDay_l2, acSolarClipByDay_l2, i, d, i, d_1, netDischarge_l0, netGrdCharge_l0, netAutCharge_l0, solarCharge_l0, solarCharge_l2, windCharge_l2, grdCharge_l3, netCharge_l0, socHE, socHS, socPercentHE, chaEff, disEff, appCodes, appThr_l3, appCap, appThr_l2, appThr_l0, appThr_Plan_l0, appCap_Plan, appType, appPriceSrc, appITCQual, enePrice, capPrice, startCycleCount, startSOC, battCapMulti, cumCycles, battEffLoss, battIdleLoad, battState, i, now, month, hour, day, weekend, vSolarMPP_l0, vSolarAC_l2, vWindAC_l2, vUseNum, aAppCodes, aAppCap_Plan, aAppThr_Plan_l0, aAppCap, aAppThr_l0, aAppThr_l2, aAppThr_l3, aAppType, aAppPriceSrc, aAppITCQual, aEnePrice, aCapPrice, vGeneration, vPOILimit, vBattSOCHS, vBattSOCHS, vNetDisThr_l0, vNetChaThr_l0, vMaxDis_l0, vMaxCha_l0, vStackLen, j, vAppThr_Plan_l0, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vCapPrice, vEnePrice, vEnePrice, vCapPrice, vEnePrice, vEnePrice, vThisDaySolarClipAC_l2, vThisDaySolarClipDC_l0, vThisDayWindClipAC_l2, vThisDaySolarDC_l0, vThisDaySolarAC_l2, vThisDayWindAC_l2, vThisHourSolarAC_l2, vThisHourSolarDC_l0, vThisHourWindAC_l2, vThisHourSolarClipAC_l2, vThisHourSolarClipDC_l0, vThisHourWindClipAC_l2, vSolarTarget, vWindTarget, vSolarTarget, vWindTarget, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoCharge_l0, vAutoCharge_l0, vDisPower_l0, vBattDisEff, vDisPowerRatio, vBattDisEff, vChaPower_l0, vBattChaEff, vChaPowerRatio, vBattChaEff, vBattSOCHE, vBattEffLoss, vBattIdleLoad, vPVS_l0, vPVS_l1, vPVS_l2, vBattNetThr_l0, vBattNetPowerRatio, vBattInv, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattDis_l1, vXfmrEff, vBattDis_l2, vBattChaGrd_l1, vBattChaGrd_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattdis, vOptConvRatio, vConvEff, vBattDis_l0, vPVS_l0, vPVSPowerRatio, vInvEff, vXfmrEff, vPVS_l1, vPVS_l2, vACCoupledBattNetThr_l2, vBattDis_l1, vBattDis_l2, vBattChaGrd_l1, vBattCha_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l0, vInvEff, vXfmrEff, vNetSolar_l1, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattDis_l3, vBattChaGrd_l3, solarPPARev, windPPARev, endSimulation;
+                        var startReading, mode, augSchedule, battCutOff, oversize, isManualDeg, manualAugTable, battChem, solarLife, windLife, battLife, inputSheet, genSheet, outSheet, appSheet, battSheet, solarAnnualDeg, windAnnualDeg, dispatchSheet, inputTable, baseSolar_l0, baseSolar_l1, baseWind_l1, baseLoad_l3, time, appDefTable, appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd, wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable, solarPPA, windPPA, sampleOutput, sampleOuput_5, outputAnnualSummary, inputs, i, numTimestamps, solarEnabled, mppEnabled, inverterEnabled, windEnabled, genEnabled, battEnabled, limitedLoad, ac, curtailSrc, curtailSolar, chargeSrc, chargeSolar, chargeWind, chargeSolarPlusWind, poiLineLoss_math, poiLimit, poiXfmrOverride, poiXfmrOverrideVal, poiXfmrNum, solarPPAMethod, windPPAMethod, solarPPAFixed, windPPAFixed, solarPPAPrice, windPPAPrice, fixedPPA, ppaPrice, baseSolar, baseSolarInverter, panelCapacity, solarInverterCapacity, solarXfmrNum, solarLineLoss_math, solarXfmrOverride, solarXfmrOverrideVal, solarInvOverride, solarInvOverrideVal, baseWind, windCapacity, windLineLoss_math, windXfmrNum, windXfmrOverride, windXfmrOverrideVal, battLineLoss_math, battXfmrNum, battPowerPOI, battEnergyPOI, battPower, battEnergy, nConvert, startRatio, fullRenewCharge, buffer, battXfmrOverride, battXfmrOverrideVal, battInvOverride, battInvOverrideVal, battConvOverride, battConvOverrideVal, battDisEffOverride, battDisEffOverrideVal, battChaEffOverride, battChaEffOverrideVal, battDisEff_math, battChaEff_math, solarLineEff, windLineEff, battLineEff, battLineEff, poiLineEff, poiXfmrEff_math, battBOSEff, ratedSolarEff, ratedWindEff, ratedBattEff, ratedBattEff, battChargeEnergy, useCaseCodes, usedApps, ppa, poiLimitArray, siteOutput_l3, netBattPOI_l3, netSolarPOI_l3, netWindPOI_l3, battChaSolarDC_l0, battChaSolarAC_l2, battChaWind_l2, battDisPOI_l3, battChaPOI_l3, annualOut, dayOfYear, start, solarMPP_l0, solarAC_l1, solarAC_l2, solarAC_l3, pvs_DCCoupled_l2, windAC_l1, windAC_l2, windAC_l3, solarClipMPP_l0, solarClipAC_l2, windClipAC_l2, totalClipAC_l2, dayClipAC_l2, dayGenAC_l2, daySolarClipMPP_l0, daySolarMPP_l0, daySolarAC_l2, dayWindAC_l2, daySolarClipAC_l2, dayWindClipAC_l2, solarOnlyInvEff, solarOnlyXfmrEff, pvsInvEff, pvsXfmrEff, windXfmrEff, endReading, i, vNow, vMonth, vHour, vDay, vWeekend, diff, oneDay, day, vUseCaseCode, vPPA, vPPA, vPPA, vPOILimit, vSolarPowerRatio, vWindPowerRatio, vSolarOnlyAC, vWindGen, vMPPGen_l0, vInvEff, vSolarAC_l1, vSolarClipMPP_l0, vMPPGen_l0, vSolarAC_l1, vSolarClipMPP_l0, vXfmrEff, vSolarAC_l2, vWindGen_l1, vXfmrEff, vWindAC_l2, vPotentialSolar_l3, vPotetialWind_l3, vSolarLimit, vWindLimit, vWindLimit, vSolarLimit, vCombinedPowerRatio, vPOIRouteEff, vSolarAC_l3, vWindAC_l3, vSolarClipAC_l2, vWindClipAC_l2, acClipByDay_l2, acGenByDay_l2, dcClipByDay_l0, dcGenByDay_l0, acSolarByDay_l2, acWindByDay_l2, acWindClipByDay_l2, acSolarClipByDay_l2, i, d, i, d_1, netDischarge_l0, netGrdCharge_l0, netAutCharge_l0, solarCharge_l0, solarCharge_l2, windCharge_l2, grdCharge_l3, netCharge_l0, socHE, socHS, socPercentHE, chaEff, disEff, appCodes, appThr_l3, appCap, appThr_l2, appThr_l0, appThr_Plan_l0, appCap_Plan, appType, appPriceSrc, appITCQual, enePrice, capPrice, startCycleCount, startSOC, battCapMulti, cumCycles, battEffLoss, battIdleLoad, battState, i, now, month, hour, day, weekend, vSolarMPP_l0, vSolarAC_l2, vWindAC_l2, vUseNum, aAppCodes, aAppCap_Plan, aAppThr_Plan_l0, aAppCap, aAppThr_l0, aAppThr_l2, aAppThr_l3, aAppType, aAppPriceSrc, aAppITCQual, aEnePrice, aCapPrice, vGeneration, vPOILimit, vBattSOCHS, vBattSOCHS, vNetDisThr_l0, vNetChaThr_l0, vMaxDis_l0, vMaxCha_l0, vStackLen, j, vAppThr_Plan_l0, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vCapPrice, vEnePrice, vEnePrice, vCapPrice, vEnePrice, vEnePrice, vThisDaySolarClipAC_l2, vThisDaySolarClipDC_l0, vThisDayWindClipAC_l2, vThisDaySolarDC_l0, vThisDaySolarAC_l2, vThisDayWindAC_l2, vThisHourSolarAC_l2, vThisHourSolarDC_l0, vThisHourWindAC_l2, vThisHourSolarClipAC_l2, vThisHourSolarClipDC_l0, vThisHourWindClipAC_l2, vSolarTarget, vWindTarget, vSolarTarget, vWindTarget, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoCharge_l0, vAutoCharge_l0, vDisPower_l0, vBattDisEff, vDisPowerRatio, vBattDisEff, vChaPower_l0, vBattChaEff, vChaPowerRatio, vBattChaEff, vBattSOCHE, vBattEffLoss, vBattIdleLoad, vPVS_l0, vPVS_l1, vPVS_l2, vBattNetThr_l0, vBattNetPowerRatio, vBattInv, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattDis_l1, vXfmrEff, vBattDis_l2, vBattChaGrd_l1, vBattChaGrd_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattdis, vOptConvRatio, vConvEff, vBattDis_l0, vPVS_l0, vPVSPowerRatio, vInvEff, vXfmrEff, vPVS_l1, vPVS_l2, vACCoupledBattNetThr_l2, vBattDis_l1, vBattDis_l2, vBattChaGrd_l1, vBattCha_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l0, vInvEff, vXfmrEff, vNetSolar_l1, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattDis_l3, vBattChaGrd_l3, solarPPARev, windPPARev, endSimulation;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -1078,6 +1086,10 @@ async function calcSite() {
                                     battSheet = context.workbook.worksheets.getItem("Battery");
                                     dispatchSheet = context.workbook.worksheets.getItem("Dispatch");
                                     inputTable = inputSheet.getRange("InputArray");
+                                    augSchedule = inputSheet.getRange("calcAugSchedule");
+                                    manualAugTable = inputSheet.getRange("calcManualDeg");
+                                    augSchedule.load("values");
+                                    manualAugTable.load("values");
                                     inputTable.load("values");
                                     mode8760 = inputSheet.getRange("mode8760");
                                     mode8760.load("values");
@@ -1176,7 +1188,10 @@ async function calcSite() {
                                     windLife = inputs["Wind life"];
                                     battLife = inputs["Storage life"];
                                     mode = inputs["Run mode"];
-
+                                    isManualDeg = inputs["Manual degradation"];
+                                    battChem = inputs["Battery chemistry"];
+                                    battCutOff = inputs["Battery cut off"];
+                                    oversize = inputs["BoL battery oversize"];
 
                                     // Start simulation
                                     var startSimulation = performance.now();
@@ -1185,7 +1200,7 @@ async function calcSite() {
                                     var windAC_l1 = new Array(numTimestamps).fill([0]);
                                     var load_l3 = baseLoad_l3.values;
                                     if (mode == "Lite") {
-                                        var projectLife = 1
+                                        var projectLife = 1;
                                     } else {
                                         var projectLife = Math.max(solarLife, windLife, battLife);
                                     }
@@ -1226,11 +1241,12 @@ async function calcSite() {
                                                 var solar_l1 = solarAC_l1;
                                                 var wind_l1 = windAC_l1;
                                                 var load_l3 = load_l3;
+                                                var useCap = 1;
                                                 // Run simulation
                                                 var yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
                                                     appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
                                                     wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-                                                    monTable1, monTable2, monTable3);
+                                                    monTable1, monTable2, monTable3, useCap);
                                                 var data8760 = yearSim[0];
                                                 var data8760Yr1 = data8760;
                                                 var outMonTable1 = yearSim[1];
@@ -1240,6 +1256,12 @@ async function calcSite() {
                                                 var emptyTable2 = new Array(outMonTable2.length).fill(new Array(12).fill(0));
                                                 var emptyTable3 = new Array(outMonTable3.length).fill(new Array(12).fill(0));
                                                 // Calculate degradation for the life of the project
+                                                var battDischargeArray = yearSim[4];
+                                                var battSOCArray = yearSim[5];
+                                                var period = 1;
+                                                var battDegradation = calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, manualAugTable, augSchedule, oversize, battCutOff, inputs);
+                                                var systemCapacity = battDegradation[0];
+                                                var useableCapacity = battDegradation[1];
                                             } else {
                                                 // Set simulation parameters
                                                 // Update generation if generator life is not exceeded
@@ -1263,13 +1285,14 @@ async function calcSite() {
                                                 if (year > battLife) {
                                                     battEnabled = false;
                                                     inputs["Battery enabled"] = 0;
+                                                } else {
+                                                    useCap = useableCapacity[year - 1];
                                                 }
-
                                                 // Run simulation
                                                 yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
                                                     appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
                                                     wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-                                                    monTable1, monTable2, monTable3);
+                                                    monTable1, monTable2, monTable3, useCap);
                                                 data8760 = yearSim[0];
                                                 var outMonTable1_yr = yearSim[1];
                                                 var outMonTable2_yr = yearSim[2];
@@ -1306,6 +1329,7 @@ async function calcSite() {
                                     // Print output
                                     console.log("Simulation complete!");
                                     console.log((Math.round((endSimulation - startSimulation))).toString() + " ms")
+                                    console.log(("Version: 20.12.1"))
 
                                     return [2 /*return*/];
                             }
@@ -1323,7 +1347,78 @@ async function calcSite() {
 }
 
 // Calculate battery degradation
-
+function calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, ManualDeg, augSchedule, oversize, cutOff, inputs) {
+    var useableCapacity, systemCapacity, battEnergyPOI, nCycles, battDischargeArray, rSOC, originalDeg, equivCycles;
+    systemCapacity = [];
+    useableCapacity = [];
+    originalDeg = new Array(41).fill(0);
+    battEnergyPOI = inputs["Battery energy"];
+    // Calculate cycles
+    nCycles = sum1D(battDischargeArray) / battEnergyPOI;
+    // Calculate rSOC
+    var countResting = 1;
+    var countActive = 1;
+    var sumResting = 0;
+    var sumActive = 0;
+    for (let i = 1; i < battSOCArray.length; i++) {
+        var socChange = battSOCArray[i][0] - battSOCArray[i - 1][0];
+        var socPer = battSOCArray[i][0] / battEnergyPOI;
+        var discharge = battDischargeArray[i][0];
+        if (socChange == 0 && discharge == 0) {
+            sumResting += Math.min(1, socPer);
+            countResting += 1;
+        } else {
+            sumActive += Math.min(1, socPer);
+            countActive += 1;
+        }
+    }
+    if (countResting > 10) {
+        rSOC = sumResting / countResting;
+    } else {
+        rSOC = sumActive / countActive;
+    }
+    // Calculate effective cycles
+    if (nCycles == 0) {
+        equivCycles = 1;
+    } else {
+        equivCycles = nCycles * nCycles / (nCycles * (-0.0000048059 * (100 / (1 + oversize)) ** 3 + 0.0018 * (100 / (1 + oversize)) ** 2 - 0.2196 * (100 / (1 + oversize)) + 9.7659)) 
+    }
+    // Calculate original battery degradation
+    for (let j = 0; j < 41; j++) {
+        originalDeg[j] = calcBattDeg(j, rSOC, battChem, equivCycles);
+    }
+    // Calculate degradation for all augmentations and beginning of life
+    var augNum = 0
+    var augYr = [];
+    var augCap = [];
+    for (let k = 0; k < augSchedule.values.length; k++) {
+        if (augSchedule.values[k][0] > 0) {
+            augNum += 1;
+            augYr.push(k);
+            augCap.push(augSchedule.values[k][0]);
+        }
+    }
+    for (let m = 0; m < 41; m++) {
+        var bolBatt = 1 * (1 + oversize) * originalDeg[m];
+        var cumAug = 0;
+        for (let n = 0; n < augNum; n++) {
+            if (m >= augYr[n]) {
+                cumAug += augCap[n] * originalDeg[m - augYr[n]];
+            } else {
+                cumAug += 0
+            }
+        }
+        var sysCap = Math.max(0, (bolBatt + cumAug));
+        if (sysCap > cutOff) {
+            var useCap = Math.min(1, sysCap);
+        } else {
+            var useCap = 0;
+        }
+        systemCapacity.push(sysCap);
+        useableCapacity.push(useCap);
+    }
+    return [systemCapacity, useableCapacity];
+}
 // Join annual monthly tables
 function concatYear(table1, table2) {
     var nRows = table1.length;
@@ -1335,6 +1430,92 @@ function concatYear(table1, table2) {
     return table1;
 }
 
+function calcBattDeg(period, rSOC, battChem, equivCycles) {
+    var systemCap;
+    if (battChem == "NMC Prismatic" || battChem == "Custom") {
+        systemCap = Math.max(0, ((100 + (-0.00001 * period ** 4 - 0.0006 * period ** 3 + 0.07 * period ** 2 - 2.1221 * period) * (-0.2133 * rSOC ** 3 + 0.24 * rSOC ** 2 + 0.0733 * rSOC + 1) * Math.exp(365 / 3000 / 2) * equivCycles / 365 * 5000 / 3000) / 100)) - (0.0001 * period ** 2 + 0.0037 * period) * 2 / (1 + 3.4 * Math.exp(rSOC * -5)) * 1 / (1 + 0.01 * Math.exp(equivCycles * 0.014));
+    } else if (battChem == "NMC Pouch") {
+        if (equivCycles <= 326) {
+            systemCap = 1 - (1 - (- 0.00000024 * period ** 4 + 0.000002 * period ** 3 + 0.00037 * period ** 2 - 0.02285 * period + 1)) * (1 - 0.6666 * (326 - equivCycles) / 326);
+        } else {
+            systemCap = 1 - (1 - (- 0.00000024 * period ** 4 + 0.000002 * period ** 3 + 0.00037 * period ** 2 - 0.02285 * period + 1)) * (equivCycles / 326);
+        }
+    } else if (battChem == "NCA 4hr") {
+        var x = 1;
+        var y = 1;
+        if (period < 6) {
+            x = 1 - (0.00001 * 0.85 * ((period ** 1.02)) ** 4 - 0.0007 * 0.85 * ((period ** 1.02)) ** 3 + 0.0115 * 0.85 * ((period ** 1.02)) ** 2 - 0.0819 * 0.85 * (period ** 1.02) + 1);
+        } else if (period < 11) {
+            x = 1 - (0.00001 * 0.7 * ((period ** 0.9)) ** 4 - 0.0007 * 0.7 * ((period ** 0.9)) ** 3 + 0.0115 * 0.7 * ((period ** 0.9)) ** 2 - 0.0819 * 0.7 * (period ** 0.9) + 0.965);
+        } else {
+            x = 1 - (0.00001 * 0.7 * ((period ** 0.95)) ** 4 - 0.0007 * 0.7 * ((period ** 0.95)) ** 3 + 0.0115 * 0.7 * ((period ** 0.95)) ** 2 - 0.0819 * 0.7 * (period ** 0.95) + 0.965);
+        }
+        if (equivCycles <= 365) {
+            y = 1 - 0.6666 * (365 - equivCycles) / 365;
+        } else {
+            y = equivCycles / 365
+        }
+        systemCap = 1 - x * y;
+    } else if (battChem == "NCA 2hr") {
+        var x = 1;
+        var y = 1;
+        if (period < 5) {
+            x = 0.00001 * (period) ** 4 - 0.0007 * (period) ** 3 + 0.0115 * (period) ** 2 - 0.0819 * (period) + 1;
+        } else if (period < 11) {
+            x = 1 - (0.00001 * 0.7 * ((period ** 0.9)) ** 4 - 0.0007 * 0.7 * ((period ** 0.9)) ** 3 + 0.0115 * 0.7 * ((period ** 0.9)) ** 2 - 0.0819 * 0.7 * (period ** 0.9) + 0.965);
+        } else {
+            x = 0.00001 * 0.88 * ((period ** 0.95)) ** 4 - 0.0007 * 0.88 * ((period ** 0.95)) ** 3 + 0.0115 * 0.88 * ((period ** 0.95)) ** 2 - 0.0819 * 0.88 * (period ** 0.95) + 0.965;
+        }
+        systemCap = x;
+    } else if (battChem == "LFP-1") {
+        var x = 1;
+        var y = 1;
+        if (period < 5) {
+            x = 1 - (- 0.0016 * period ** 3 + 0.0145 * period ** 2 - 0.058 * period + 1);
+        } else {
+            x = 1 - (-0.0000016 * period ** 5 + 0.00007085 * period ** 4 - 0.0011844 * period ** 3 + 0.0095436 * period ** 2 - 0.049 * period + 0.9984);
+        }
+        if (equivCycles <= 365) {
+            y = 1 - 0.6666 * (365 - equivCycles) / 365;
+        } else {
+            y = equivCycles / 365
+        }
+        systemCap = 1 - x * y;
+    } else if (battChem == "LFP-2") {
+        var x = 1;
+        var y = 1;
+        if (period < 6) {
+            x = 1 - (-0.000235 * period ** 5 + 0.0035 * period ** 4 - 0.0204 * period ** 3 + 0.0597 * period ** 2 - 0.1105 * period + 1);
+        } else {
+            x = 1 - (- 0.0000433 * period ** 3 + 0.0016 * period ** 2 - 0.03 * period + 0.9582);
+        }
+        if (equivCycles <= 365) {
+            y = 1 - 0.6666 * (365 - equivCycles) / 365;
+        } else {
+            y = equivCycles / 365
+        }
+        systemCap = 1 - x * y;
+    } else if (battChem == "LFP-3") {
+        var x = 1;
+        var y = 1;
+        if (period < 4) {
+            x = 1 - (- 0.0042 * period ** 3 + 0.025 * period ** 2 - 0.0658 * period + 1);
+        } else {
+            x = 1 - (- 0.000035 * period ** 3 + 0.0009 * period ** 2 - 0.0233 * period + 0.9778);
+        }
+        if (equivCycles <= 365) {
+            y = 1 - 0.6666 * (365 - equivCycles) / 365;
+        } else {
+            y = equivCycles / 365
+        }
+        systemCap = 1 - x * y;
+    }
+    else if (battChem == "LTO") {
+        systemCap = 1 - (1 - (100 + (-0.0025 * period ** 3 + 0.07 * period ** 2 - 2.0521 * period) * Math.exp(365 / 25000 / 2) * equivCycles / 365 * 5000 / 25000) / 100);
+    }
+        
+    return systemCap;
+}
 
 // Scale Excel column
 function scaleCol(column, multiplier) {
