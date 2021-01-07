@@ -1053,7 +1053,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
     monTable1Values[40] = monBESSSolarPPAEne;
     monTable1Values[41] = monBESSWindPPAEne;
 
-    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, battChaGenTotal, socHS, solarAC_l3, windAC_l3, battMaxDisCap, solarPPADis_l3, windPPADis_l3]);
+    var dataTableValues = joinArrays([siteOutput_l3, battDisPOI_l3, battChaGenTotal, battChaPOI_l3, socHS, solarAC_l3, windAC_l3, battMaxDisCap, solarPPADis_l3, windPPADis_l3]);
     
     return [dataTableValues, monTable1Values, monBESSEneRev, monBESSCapRev, battDisPOI_l3, socHS];
     /*
@@ -1329,7 +1329,7 @@ async function calcSite() {
                                     // Print output
                                     console.log("Simulation complete!");
                                     console.log((Math.round((endSimulation - startSimulation))).toString() + " ms")
-                                    console.log(("Version: 20.12.1"))
+                                    console.log(("Version: 20.12.3"))
 
                                     return [2 /*return*/];
                             }
