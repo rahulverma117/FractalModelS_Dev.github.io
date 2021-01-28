@@ -1270,6 +1270,11 @@ async function calcSiteLife(year) {
                         var battDegradation = calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, manualAugTable, augSchedule, oversize, battCutOff, inputs);
                         var systemCapacity = battDegradation[0];
                         var useableCapacity = battDegradation[1];
+                        // Write output
+                        // Disable excel calculations untill next at then end of the function
+                        var app = context.workbook.application;
+                        app.suspendApiCalculationUntilNextSync();
+                        outDataTable.values = data8760Yr1;
                     } else {
                         // Set simulation parameters
                         // Update generation if generator life is not exceeded
