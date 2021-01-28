@@ -1206,7 +1206,6 @@ async function calcSite() {
                                     }
                                     var maxModelLife = 40;
                                     // Calculate generation and battery capacity
-                                    console.log("Start Refresh")
                                     for (let year = 1; year <= maxModelLife; year++) {
                                         var loopStart = performance.now()
                                         if (year <= projectLife) {
