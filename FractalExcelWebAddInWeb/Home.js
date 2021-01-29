@@ -95,7 +95,7 @@ async function startCalcSite() {
     const promises = [];
 
     for (let i = 1; i < 40; ++i) {
-        previousLoop = calcSiteLife(i)[0];
+        await calcSiteLife(i);
                 
     }
 
@@ -1348,8 +1348,7 @@ async function calcSiteLife(year) {
 
                 var loopEnd = performance.now()
                 console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
-                thisLoopResults = [1,2,3];
-                return thisLoopResults;
+                
             }
         }
     })
