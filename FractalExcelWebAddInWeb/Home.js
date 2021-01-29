@@ -1617,7 +1617,7 @@ async function calcSite() {
                                     // Print output
                                     console.log("Simulation complete!");
                                     console.log((Math.round((endSimulation - startSimulation))).toString() + " ms")
-                                    console.log(("Version: 20.12.3"))
+                                    console.log(("Version: 21.3.1"))
 
                                     return [2 /*return*/];
                             }
