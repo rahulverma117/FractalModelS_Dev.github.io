@@ -1290,7 +1290,7 @@ async function calcSiteLife(year) {
                         if (solarEnabled) {
                             if (mppEnabled) {
                                 if (baseSolar > 0) {
-                                    var solarDCMulti = panelCapacity / baseSolar * ((1 - solarAnnualDeg) * Math.pow(year - 1));
+                                    var solarDCMulti = panelCapacity / baseSolar * (Math.pow((1 - solarAnnualDeg), year - 1));
                                 } else {
                                     var solarDCMulti = 0;
                                 }
@@ -1300,7 +1300,7 @@ async function calcSiteLife(year) {
                                 var solarMPP_l0 = scaleCol(baseSolar_l0.values, solarDCMulti);
                             } else {
                                 if (baseSolarInverter > 0) {
-                                    var solarACMulti = solarInverterCapacity / baseSolarInverter * ((1 - solarAnnualDeg)*Math.pow(year - 1));
+                                    var solarACMulti = solarInverterCapacity / baseSolarInverter * (Math.pow((1 - solarAnnualDeg), year - 1));
                                 } else {
                                     var solarACMulti = 0;
                                 }
@@ -1312,7 +1312,7 @@ async function calcSiteLife(year) {
                         }
                         if (windEnabled) {
                             if (baseWind > 0) {
-                                var windACMulti = windCapacity / baseWind * ((1 - windAnnualDeg)*Math.pow(year - 1));
+                                var windACMulti = windCapacity / baseWind * (Math.pow((1 - windAnnualDeg), year - 1));
                             } else {
                                 var windACMulti = 0;
                             }
