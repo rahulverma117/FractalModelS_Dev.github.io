@@ -1324,11 +1324,12 @@ async function calcSiteLife(year) {
                         var wind_l1 = windAC_l1;
                         var load_l3 = load_l3;
                         // Update battery energy storage capacity
+                        var capTableY1 = outDegTable.values;
                         if (year > battLife) {
                             battEnabled = false;
                             inputs["Battery enabled"] = 0;
                         } else {
-                            useCap = useableCapacity[year - 1];
+                            useCap = capTableY1[year - 1][1];
                         }
                         // Run simulation
                         yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
@@ -1340,15 +1341,15 @@ async function calcSiteLife(year) {
                         var outMonTable2_yr = yearSim[2];
                         var outMonTable3_yr = yearSim[3];
                         // Concatenate results
-                        outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
-                        outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
-                        outMonTable3 = concatYear(outMonTable3, outMonTable3_yr);
+                        // outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
+                        // outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
+                        // outMonTable3 = concatYear(outMonTable3, outMonTable3_yr);
                     }
                     
                 } else {
-                    outMonTable1 = concatYear(outMonTable1, emptyTable1);
-                    outMonTable2 = concatYear(outMonTable2, emptyTable2);
-                    outMonTable3 = concatYear(outMonTable3, emptyTable3);
+                    // outMonTable1 = concatYear(outMonTable1, emptyTable1);
+                    // outMonTable2 = concatYear(outMonTable2, emptyTable2);
+                    // outMonTable3 = concatYear(outMonTable3, emptyTable3);
                 }
 
                 var loopEnd = performance.now()
