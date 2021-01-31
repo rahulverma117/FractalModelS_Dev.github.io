@@ -1169,11 +1169,14 @@ async function calcSiteLife(year) {
         monTable1 = outSheet.getRange("MonthlyOutTable1");
         monTable2 = outSheet.getRange("MonthlyOutTable2");
         monTable3 = outSheet.getRange("MonthlyOutTable3");
+        outDegTable = outSheet.getRange("outDegTable");
         outputAnnualSummary.load("values");
         outDataTable.load("values");
         monTable1.load("values");
         monTable2.load("values");
         monTable3.load("values");
+        outDegTable.load("values");
+
         
         await context.sync();
         {
@@ -1271,11 +1274,13 @@ async function calcSiteLife(year) {
                         var battDegradation = calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, manualAugTable, augSchedule, oversize, battCutOff, inputs);
                         var systemCapacity = battDegradation[0];
                         var useableCapacity = battDegradation[1];
+                        var outDegTableValues = listToMatrix(systemCapacity, useableCapacity);
                         // Write output
                         // Disable excel calculations untill next at then end of the function
                         var app = context.workbook.application;
                         app.suspendApiCalculationUntilNextSync();
                         outDataTable.values = data8760Yr1;
+                        outDegTable.values = outDegTableValues;
                     } else {
                         // Set simulation parameters
                         if (solarEnabled) {
@@ -1716,6 +1721,15 @@ function concatYear(table1, table2) {
         table1[i] = prevRow.concat(newRow);
     }
     return table1;
+}
+
+function listToMatrix(list1, list2){
+    var excelTable = [];
+    for (let i = 0; i < list1.length; i++) {
+        var row = [list1[i], list2[i]];
+        excelTable.push(row);
+    }
+    return excelTable;
 }
 
 function calcBattDeg(period, rSOC, battChem, equivCycles) {
