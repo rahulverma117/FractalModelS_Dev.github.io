@@ -1180,6 +1180,12 @@ async function calcSiteLife(year) {
         tempMonTable1Range = "UP" + (5 + (year -1) * 48).toString() + ":" + "VA" + (5 + (year -1) * 48 + 47).toString();
         tempMonTable1 = outSheet.getRange(tempMonTable1Range);
         tempMonTable1.load("values");
+        tempMonTable2Range = "VD" + (5 + (year -1) * 9).toString() + ":" + "VO" + (5 + (year -1) * 9 + 8).toString();
+        tempMonTable2 = outSheet.getRange(tempMonTable2Range);
+        tempMonTable2.load("values");
+        tempMonTable3Range = "VR" + (5 + (year -1) * 9).toString() + ":" + "WC" + (5 + (year -1) * 9 + 8).toString();
+        tempMonTable3 = outSheet.getRange(tempMonTable3Range);
+        tempMonTable3.load("values");
 
         
         await context.sync();
@@ -1211,6 +1217,9 @@ async function calcSiteLife(year) {
             battChem = inputs["Battery chemistry"];
             battCutOff = inputs["Battery cut off"];
             oversize = inputs["BoL battery oversize"];
+            var emptyTable1 = new Array(outMonTable1.length).fill(new Array(12).fill(0));
+            var emptyTable2 = new Array(outMonTable2.length).fill(new Array(12).fill(0));
+            var emptyTable3 = new Array(outMonTable3.length).fill(new Array(12).fill(0));
             // Start simulation
             var startSimulation = performance.now();
             var solarMPP_l0 = new Array(numTimestamps).fill([0]);
@@ -1224,7 +1233,7 @@ async function calcSiteLife(year) {
             }
             {
                 var loopStart = performance.now()
-                if (year <= projectLife) {
+                if (true) {
                     if (year == 1) {
                         if (solarEnabled) {
                             if (mppEnabled) {
@@ -1268,9 +1277,11 @@ async function calcSiteLife(year) {
                         var outMonTable1 = yearSim[1];
                         var outMonTable2 = yearSim[2];
                         var outMonTable3 = yearSim[3];
-                        var emptyTable1 = new Array(outMonTable1.length).fill(new Array(12).fill(0));
-                        var emptyTable2 = new Array(outMonTable2.length).fill(new Array(12).fill(0));
-                        var emptyTable3 = new Array(outMonTable3.length).fill(new Array(12).fill(0));
+                        // Temp outputs
+                        var outTempTable1 = yearSim[1];
+                        var outTempTable2 = yearSim[2];
+                        var outTempTable3 = yearSim[3];
+                        
                         // Calculate degradation for the life of the project
                         var battDischargeArray = yearSim[4];
                         var battSOCArray = yearSim[5];
@@ -1348,19 +1359,26 @@ async function calcSiteLife(year) {
                         // outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
                         // outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
                         // outMonTable3 = concatYear(outMonTable3, outMonTable3_yr);
+                        // Temp outputs
+                        var outTempTable1 = yearSim[1];
+                        var outTempTable2 = yearSim[2];
+                        var outTempTable3 = yearSim[3];
                     }
                     
                 } else {
                     // outMonTable1 = concatYear(outMonTable1, emptyTable1);
                     // outMonTable2 = concatYear(outMonTable2, emptyTable2);
                     // outMonTable3 = concatYear(outMonTable3, emptyTable3);
+                    
                 }
 
                 var loopEnd = performance.now()
                 // Disable excel calculations untill next at then end of the function
                 var app = context.workbook.application;
                 app.suspendApiCalculationUntilNextSync();
-                tempMonTable1.values = yearSim[1];
+                tempMonTable1.values = outTempTable1;
+                tempMonTable2.values = outTempTable2;
+                tempMonTable3.values = outTempTable3;
                 console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
                 
             }
