@@ -1354,7 +1354,7 @@ async function calcSiteLife(year) {
 
                 var loopEnd = performance.now()
                 console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
-                
+                return yearSim;
             }
         }
     })
