@@ -95,8 +95,7 @@ async function startCalcSite() {
     const promises = [];
 
     for (let i = 1; i < 40; ++i) {
-        result = await calcSiteLife(i);
-        console.log(result[1]);
+        await calcSiteLife(i);
                 
     }
 
@@ -1177,6 +1176,10 @@ async function calcSiteLife(year) {
         monTable2.load("values");
         monTable3.load("values");
         outDegTable.load("values");
+        // Read temporary table output ranges
+        tempMonTable1Range = "UP" + (5 + (year -1) * 48).toString() + ":" + "VA" + (5 + (year -1) * 48 + 47).toString();
+        tempMonTable1 = outSheet.getRange(tempMonTable1Range);
+        tempMonTable1.load("values");
 
         
         await context.sync();
@@ -1354,8 +1357,12 @@ async function calcSiteLife(year) {
                 }
 
                 var loopEnd = performance.now()
+                // Disable excel calculations untill next at then end of the function
+                var app = context.workbook.application;
+                app.suspendApiCalculationUntilNextSync();
+                tempMonTable1.values = yearSim[1];
                 console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
-                return yearSim;
+                
             }
         }
     })
