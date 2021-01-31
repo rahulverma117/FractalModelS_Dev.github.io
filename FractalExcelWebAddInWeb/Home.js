@@ -872,7 +872,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                 var vOptConvRatio = calcConverterRatio(vBattdis, ac, battPower, nConvert);
                 var vConvEff = calcConverterEff(vOptConvRatio, vBattdis, ac, battConvOverride, battConvOverrideVal);
                 var vBattDis_l0 = vBattdis * vConvEff;
-                var vPVS_l0 = solarMPP_l0[i][0] + vAutoChargePV_l0 + vBattDis_l0;
+                var vPVS_l0 = solarMPP_l0[i][0] + vAutoChargePV_l0 + vBattDis_l0 + vNetChaThr_l0;
                 var vPVSPowerRatio = vPVS_l0 / solarInverterCapacity;
                 var vInvEff = calcInverterEff(vPVSPowerRatio, solarInvOverride, solarInvOverrideVal);
                 var vSolarPowerRatio = Math.min(1, vPVS_l0 / solarInverterCapacity);
@@ -882,7 +882,7 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
                 var vACCoupledBattNetThr_l2 = 0;
                 var vBattDis_l1 = Math.min(battPower, vBattDis_l0 * vInvEff);
                 var vBattDis_l2 = vBattDis_l1 * Math.pow(vXfmrEff, solarXfmrNum) * solarLineEff;
-                var vBattChaGrd_l1 = vNetChaThr_l0 / vBattInv;
+                var vBattChaGrd_l1 = vNetChaThr_l0 / vInvEff;
                 var vBattChaGrd_l2 = vBattChaGrd_l1 / Math.pow(vXfmrEff, solarXfmrNum) / solarLineEff;
                 var vSiteOutput_l2 = vWindAC_l2 + vAutoChargeWind_l2 + vPVS_l2;
                 if (vSiteOutput_l2 > 0) {
