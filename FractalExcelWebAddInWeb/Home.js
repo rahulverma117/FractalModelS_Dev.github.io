@@ -1217,9 +1217,6 @@ async function calcSiteLife(year) {
             battChem = inputs["Battery chemistry"];
             battCutOff = inputs["Battery cut off"];
             oversize = inputs["BoL battery oversize"];
-            var emptyTable1 = new Array(outMonTable1.length).fill(new Array(12).fill(0));
-            var emptyTable2 = new Array(outMonTable2.length).fill(new Array(12).fill(0));
-            var emptyTable3 = new Array(outMonTable3.length).fill(new Array(12).fill(0));
             // Start simulation
             var startSimulation = performance.now();
             var solarMPP_l0 = new Array(numTimestamps).fill([0]);
