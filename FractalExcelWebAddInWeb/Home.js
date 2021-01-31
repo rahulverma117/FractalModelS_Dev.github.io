@@ -96,6 +96,7 @@ async function startCalcSite() {
 
     for (let i = 1; i < 40; ++i) {
         result = await calcSiteLife(i);
+        console.log(result[1]);
                 
     }
 
