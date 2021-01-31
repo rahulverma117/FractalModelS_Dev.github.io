@@ -1335,6 +1335,7 @@ async function calcSiteLife(year) {
                         } else {
                             useCap = capTableY1[year - 1][1];
                         }
+                        console.log([usecap])
                         // Run simulation
                         yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
                             appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
