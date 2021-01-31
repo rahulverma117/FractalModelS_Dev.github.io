@@ -1341,7 +1341,7 @@ async function calcSiteLife(year) {
                             battEnabled = false;
                             inputs["Battery enabled"] = 0;
                         } else {
-                            useCap = 1; //capTableY1[year - 1][1];
+                            useCap = capTableY1[year - 1][1];
                         }
                         // Run simulation
                         yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
