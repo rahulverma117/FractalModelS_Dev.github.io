@@ -94,7 +94,7 @@ async function startCalcSite() {
 
     const promises = [];
 
-    for (let i = 1; i < 40; ++i) {
+    for (let i = 1; i <= 40; ++i) {
         await calcSiteLife(i);
                 
     }
