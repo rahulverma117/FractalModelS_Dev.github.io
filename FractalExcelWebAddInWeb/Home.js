@@ -1271,9 +1271,9 @@ async function calcSiteLife(year) {
                             monTable1, monTable2, monTable3, useCap);
                         var data8760 = yearSim[0];
                         var data8760Yr1 = data8760;
-                        var outMonTable1 = yearSim[1];
-                        var outMonTable2 = yearSim[2];
-                        var outMonTable3 = yearSim[3];
+                        // var outMonTable1 = yearSim[1];
+                        // var outMonTable2 = yearSim[2];
+                        // var outMonTable3 = yearSim[3];
                         // Temp outputs
                         var outTempTable1 = yearSim[1];
                         var outTempTable2 = yearSim[2];
@@ -1349,9 +1349,9 @@ async function calcSiteLife(year) {
                             wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
                             monTable1, monTable2, monTable3, useCap);
                         data8760 = yearSim[0];
-                        var outMonTable1_yr = yearSim[1];
-                        var outMonTable2_yr = yearSim[2];
-                        var outMonTable3_yr = yearSim[3];
+                        // var outMonTable1_yr = yearSim[1];
+                        // var outMonTable2_yr = yearSim[2];
+                        // var outMonTable3_yr = yearSim[3];
                         // Concatenate results
                         // outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
                         // outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
