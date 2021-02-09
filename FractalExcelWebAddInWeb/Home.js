@@ -932,7 +932,11 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
             battChaGenTotal[i] = [vAutoChargePV_l0 + vAutoChargePV_l2 + vAutoChargeWind_l2];
             // Calculate effective efficiency for BESS throughput between l0 and l3
             if (vBattDis_l3 > 0) {
-                var avgDisEff = vBattDis_l3 / vBattDis_l0;
+                if (ac) {
+                    var avgDisEff = vBattDis_l3 / vBattDis_l0;
+                } else {
+                    var avgDisEff = vBattDis_l3 / vBattdis;
+                }
             } else {
                 var avgDisEff = 1;
             }
