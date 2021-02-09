@@ -1186,7 +1186,9 @@ async function calcSiteLife(year) {
         tempMonTable3Range = "VR" + (5 + (year -1) * 9).toString() + ":" + "WC" + (5 + (year -1) * 9 + 8).toString();
         tempMonTable3 = outSheet.getRange(tempMonTable3Range);
         tempMonTable3.load("values");
-
+        // Set calculation mode to manual
+        var app = context.workbook.application;
+        set(calculationMode: Excel.CalculationMode = "Manual");
         
         await context.sync();
         {
