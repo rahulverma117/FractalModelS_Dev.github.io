@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<App xmlns="http://schemas.microsoft.com/sharepoint/2012/app/manifest"
+     Name="FractalExcelWebAddIn"
+     ProductID="{efb20b5e-54f0-4757-9a45-10549cc658d5}"
+     Version="1.0.0.0"
+     SharePointMinVersion="15.0.0.0"
+>
+  <Properties>
+    <Title>FractalExcelWebAddIn</Title>
+    <StartPage>~appWebUrl/_layouts/15/WopiFrame.aspx?sourcedoc=~appWebUrl%2FOfficeDocuments%2FBook1.xlsx&amp;action=edit</StartPage>
+  </Properties>
+
+  <AppPrincipal>
+    <RemoteWebApplication ClientId="*" />
+  </AppPrincipal>
+</App>

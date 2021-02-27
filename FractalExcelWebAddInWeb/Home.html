@@ -4,19 +4,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <title>Excel Add-In with Commands Sample</title>
 
-    <script src="Scripts/jquery-3.4.1.js" type="text/javascript"></script>
-    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>
 
     <!-- To enable offline debugging using a local reference to Office.js, use:  -->
     <!-- <script src="Scripts/Office/MicrosoftAjax.js" type="text/javascript"></script>  -->
     <!-- <script src="Scripts/Office/1/office.js" type="text/javascript"></script>  -->
 
-    <script src="Home.js" type="text/javascript"></script>
     <link href="Home.css" rel="stylesheet" type="text/css" />
- 
+
 
     <!-- For Office UI Fabric Core, go to https://aka.ms/office-ui-fabric to learn more. -->
- 
     <!-- To enable the offline use of Office UI Fabric Core, use: -->
     <!-- link rel="stylesheet" href="Content/fabric.min.css" -->
 </head>
@@ -34,29 +30,54 @@
             Model S
         </span>
     </div>
-    <div class="content padding">
-        <button id="simulateSite" class="ms-Button">
-            <span class="ms-Button-label">Simulate Site</span>
-        </button>
-        <div id="myLog">
+    <div class="tab">
+        <button class="tablinks" onclick="openTab(event, 'functionsContentDiv')" id="buttonHomeTab">Home</button>
+        <button class="tablinks" onclick="openTab(event, 'loginDiv')" id="buttonLoginTab">Login</button>
+    </div>
+    <div class="content">
 
+
+        <div id="loginDiv" class="tabcontent">
+            <span>Fractal Model X™ is an Excel-based technoeconomic energy storage modeling package for project feasibility design, analysis and financing. The Fractal Model™ provides investment grade analysis while simulating performance, degradation, warranty, costs and revenues to optimize the economics of your energy storage and hybrid projects. Fractal Model X™ is available through a license with quarterly updates.</span>
+            <br />
+            <div class="buttons">
+
+                <button id="buttonLogin" class="ms-Button wideButton">
+                    <span class="ms-Button-label">Login</span>
+                </button>
+                <button id="buttonLogout" class="ms-Button wideButton">
+                    <span class="ms-Button-label">Logout</span>
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="content padding">
-        <button id="simulateProjectLife" class="ms-Button">
-            <span class="ms-Button-label">Simulate Project</span>
-        </button>
-        <div id="myLog">
+        <div id="functionsContentDiv" >
+            <div id="functionsDiv" class="tabcontent">
+                <div class="buttons">
 
+                    <button id="downloadModel" class="ms-Button wideButton">
+                        <span class="ms-Button-label">Download Model</span>
+                    </button>
+                    <button id="simulateProjectLife" class="ms-Button wideButton">
+                        <span class="ms-Button-label">Simulate Project</span>
+                    </button>
+                </div>
+                <div id="myLog">
+
+                </div>
+            </div>
+            <div id="loginMsg"><span>Please Login.</span></div>
         </div>
-    </div>
+        <div class="footer padding">
+            <span>
+                © Fractal Model LLC. All rights reserved
+            </span>
+        </div>
 
-   
+        <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+        <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>
+        <script src="https://rawgit.com/aws/amazon-cognito-identity-js/master/dist/aws-cognito-sdk.min.js"></script>
+        <script src="https://rawgit.com/aws/amazon-cognito-identity-js/master/dist/amazon-cognito-identity.min.js"></script>
+        <script src="Home.js" type="text/javascript"></script>
 
-    <div class="footer padding">
-        <span>
-            © Fractal Model LLC. All rights reserved
-        </span>
-    </div>
 </body>
 </html>

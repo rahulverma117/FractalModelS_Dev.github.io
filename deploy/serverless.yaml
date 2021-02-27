@@ -1,0 +1,94 @@
+service: FractalModelX
+
+plugins:
+  - serverless-plugin-scripts
+  - '@anttiviljami/serverless-stack-output'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ${opt:region, 'us-east-1'}
+
+custom:
+  siteName: fractal-model-x-${opt:region}
+  domain: 'addin.fractalmodel.com'
+  starSslCertARN: arn:aws:acm:us-east-1:011104301410:certificate/0dff74ab-932c-4a55-98d0-88cbe2375fd9
+
+  # plugin options
+  scripts:
+    hooks:
+      'aws:deploy:finalize:cleanup': echo 'S3 Site URL:' http://${self:custom.siteName}.s3-website.${self:provider.region}.amazonaws.com
+
+  output:
+    file: ./sls-stack-output.json
+
+
+resources:
+  Resources:
+    StaticSite:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: PublicRead
+        BucketName: ${self:custom.siteName}
+        WebsiteConfiguration:
+          IndexDocument: Home.html
+
+    SiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref StaticSite
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Join ["", [ !GetAtt StaticSite.Arn, "/*" ] ]
+
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Aliases:
+            - "${self:custom.domain}"
+          Origins:
+            - DomainName: ${self:custom.siteName}.s3-website.${self:provider.region}.amazonaws.com
+              Id: WebApp
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginProtocolPolicy: http-only
+          Enabled: true
+          DefaultRootObject: Home.html
+          PriceClass: PriceClass_100
+          DefaultCacheBehavior:
+            AllowedMethods:
+              - GET
+              - HEAD
+            TargetOriginId: WebApp
+            ForwardedValues:
+              Cookies:
+                Forward: none
+              QueryString: true
+            SmoothStreaming: false
+            ViewerProtocolPolicy: redirect-to-https
+
+          ViewerCertificate:
+            MinimumProtocolVersion: TLSv1
+            SslSupportMethod: sni-only
+            AcmCertificateArn: ${self:custom.starSslCertARN}
+
+  Outputs:
+    SiteBucketName:
+      Value: ${self:custom.siteName}
+      Export:
+        Name: site-bucket-${self:custom.siteName}
+
+    Region:
+      Value: ${self:provider.region}
+      Export:
+        Name: Region-${self:custom.siteName}
+
+    CloudFrontID:
+      Value: !Ref CloudFrontDistribution
+      Export:
+        Name: CloudFrontID-${self:custom.siteName}

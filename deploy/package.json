@@ -1,0 +1,17 @@
+{
+  "name": "deploy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build.js",
+  "dependencies": {
+    "@anttiviljami/serverless-stack-output": "^0.3.1",
+    "javascript-obfuscator": "^2.10.4",
+    "serverless": "^2.28.0",
+    "serverless-plugin-scripts": "^1.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

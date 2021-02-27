@@ -1,0 +1,37 @@
+﻿<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link href="Home.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+    <div>
+        <div class="login">
+
+            
+            <label for="username">Users:</label>
+            <input type="text" id="username" name="username"><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password"><br>
+
+            <button id="LoginButton" class="ms-Button">
+                <span class="Button-label">
+                    Login
+                </span>
+            </button>
+            <button id="CloseButton" class="ms-Button">
+                <span class="Button-label">
+                    Close
+                </span>
+            </button>
+            <div class="error"><span id="errorMsg"> </span></div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>
+    <script src="https://rawgit.com/aws/amazon-cognito-identity-js/master/dist/aws-cognito-sdk.min.js"></script>
+    <script src="https://rawgit.com/aws/amazon-cognito-identity-js/master/dist/amazon-cognito-identity.min.js"></script>
+    <script src="Scripts/Login.js" type="text/javascript"></script>
+</body>
+</html>

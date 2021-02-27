@@ -1,0 +1,109 @@
+﻿/* Page-specific styling */
+
+html {
+    position: relative;
+    min-height: 90%;
+    font-family: Arial;
+}
+body {
+    margin: 0 0 40px; /* bottom = footer height */
+}
+
+.header {
+   
+    left: 0;
+    bottom: 0; 
+    width: 100%;
+    border-bottom: 1px solid black;
+    text-align: center;
+
+}
+
+.header span{
+    font-family: Arial;
+    font-weight: bold;
+    font-size: large;
+}
+
+.content span {
+    font-family: Arial;
+    text-align: left;
+  
+}
+
+.content {
+    padding-top: 5px;
+    padding: 5px  5px  5px  5px;
+}
+
+.logo {
+    background: url("Images/logo.png");
+    height: 80px; /* You must set a specified height */
+    background-size: 50%;
+    background-position: center; /* Center the image */
+    background-repeat: no-repeat; /* Do not repeat the image */
+}
+
+#myLog {
+
+    padding: 15px;
+    font-family: Arial; 
+    font-size: small;
+}
+
+.login {
+    align-content: center;
+    margin: 5px;
+    padding: 5px;
+    width: 50%;
+    margin: 0 auto;
+}
+
+.content button {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 5px;
+    font-family: Arial;
+    font-weight: bold;
+    margin: 5px;
+    min-width: 100px;
+}
+
+label {
+    width: 100px;     
+    display: block;
+}
+input {
+    width: 200px;    
+    display: block;
+}
+.footer {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: rgb(249, 159, 35);
+    font-family: Arial;
+    font-weight: bold;
+    font-size: small;
+    text-align: center;
+    width: 100%;
+    border-top: 1px solid black;
+}
+
+.padding {
+    padding: 15px;
+}
+.error
+{
+    margin: 5px;
+}
+.buttons {
+    align-content: center;
+    width: 50%;
+    margin: 0 auto;
+}
+.wideButton
+{
+    width: 200px;
+}

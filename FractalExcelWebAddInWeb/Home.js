@@ -1,3 +1,4 @@
+﻿
 (function () {
     "use strict";
 
@@ -10,16 +11,24 @@
             // Initialize the notification mechanism and hide it
 
 
-            $("#simulateSite").click(calcSite);
-            $("#simulateProjectLife").click(startCalcSite);
- 
+            $("#simulateProjectLife").click(simulateProject);
+            $("#buttonLogin").click(doLogin);
+            $("#buttonLogout").click(doLogout);
+            $("#downloadModel").click(downloadModel);
+            $("#buttonLogin").show();
+            $("#buttonLogout").hide();
+            CheckToken();
+            $("#functionsDiv").hide();
+            $("#loginMsg").show();
+            document.getElementById("buttonLoginTab").click();
+
         });
     };
 
     window.console = {
         log: function (str) {
 
-            if (str.includes("Agave") ) {
+            if (str.includes("Agave")) {
                 return;
             }
             else if (str.includes("Office.js")) {
@@ -37,6 +46,181 @@
 
 })();
 
+
+async function simulateProject() {
+    const promises = [];
+    for (let i = 1; i <= 40; ++i) {
+        await calcSiteLife(i);
+    }
+}
+
+function listToMatrix(list1, list2){
+    var excelTable = [];
+    for (let i = 0; i < list1.length; i++) {
+        var row = [list1[i], list2[i]];
+        excelTable.push(row);
+    }
+    return excelTable;
+}
+
+async function downloadModel() {
+    var myFile = 'https://fractalmodel-x-storage-us-west-2.s3-us-west-2.amazonaws.com/model.xlsm';//window.location.origin + '/model.xlsm';
+
+
+    toDataUrl(myFile, function (result) {
+        Excel.run(function (context) {
+            // strip off the metadata before the base64-encoded string
+            var startIndex = result.toString().indexOf("base64,");
+            var workbookContents = result.toString().substr(startIndex + 7);
+
+            Excel.createWorkbook(workbookContents);
+            return context.sync();
+        }).catch(errorHandlerFunction);
+    });
+}
+function openTab(evt, tabName) {
+    // Declare all variables
+    var i, tabcontent, tablinks;
+
+    // Get all elements with class="tabcontent" and hide them
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+
+    // Get all elements with class="tablinks" and remove the class "active"
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+
+    // Show the current tab, and add an "active" class to the button that opened the tab
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+function errorHandlerFunction(error) {
+
+    console.log(error);
+}
+function toDataUrl(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+        var reader = new FileReader();
+        reader.onloadend = function () {
+            callback(reader.result);
+        }
+        reader.readAsDataURL(xhr.response);
+    };
+    xhr.open('GET', url);
+    xhr.responseType = 'blob';
+    xhr.send();
+}
+function doLogout() {
+
+    OfficeRuntime.storage.setItem("tokens", "").then(function (result) {
+        CheckToken();
+        $("#buttonLogin").show();
+        $("#buttonLogout").hide();
+    });
+}
+function doLogin() {
+
+    Office.context.ui.displayDialogAsync(window.location.origin + '/Login.html', { height: 20, width: 20, displayInIframe: true },
+        function (asyncResult) {
+
+            var dialog = asyncResult.value;
+            dialog.addEventHandler(Office.EventType.DialogMessageReceived, function (obj) {
+                dialog.close();
+                if (obj.message != false) {
+
+
+
+                    OfficeRuntime.storage.setItem("tokens", obj.message).then(function (result) {
+                        CheckToken();
+
+                    });
+                }
+            });
+        });
+}
+function CheckToken() {
+    OfficeRuntime.storage.getItem("tokens").then(function (result) {
+
+        if (result != null) {
+
+            // console.log(result);
+
+            var tokens = result.split(",");
+
+
+            const idToken = new AmazonCognitoIdentity.CognitoIdToken({
+                IdToken: tokens[0]
+            });
+            const accessToken = new AmazonCognitoIdentity.CognitoAccessToken({
+                AccessToken: tokens[1]
+            });
+            const refreshToken = new AmazonCognitoIdentity.CognitoRefreshToken({
+                RefreshToken: tokens[2]
+            });
+
+
+
+            var sessionData = {
+                IdToken: idToken,
+                RefreshToken: refreshToken,
+                AccessToken: accessToken
+            };
+
+
+            const userSession = new AmazonCognitoIdentity.CognitoUserSession(sessionData);
+
+            var poolData = {
+                UserPoolId: 'us-west-2_HmAsbnylC',
+                ClientId: 'u23tqn215tlmhac1ju8e9khhq'
+            };
+            var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+
+            const userData = {
+                Username: tokens[3],
+                Pool: userPool
+            }
+
+            const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+            cognitoUser.signInUserSession = userSession;
+
+            cognitoUser.getSession(function (err, session) { // You must run this to verify that session (internally)
+                if (session.isValid()) {
+
+                    document.getElementById("buttonHomeTab").click();
+                    $("#buttonLogin").hide();
+                    $("#buttonLogout").show();
+                    $("#functionsDiv").show();
+                    $("#loginMsg").hide();
+
+
+
+
+
+
+                } else {
+
+                    document.getElementById("buttonLoginTab").click();
+                    $("#buttonLogin").show();
+                    $("#buttonLogout").hide();
+                    $("#functionsDiv").hide();
+                    $("#loginMsg").show();
+
+
+
+                }
+            });
+        }
+
+    });
+
+
+
+}
 
 async function calcProjectLife() {
     await Excel.run(async (context) => {
@@ -82,31 +266,11 @@ async function calcProjectLife() {
 
 
         // Output first year results
-        
+
 
         await context.sync();
 
     });
-}
-
-async function startCalcSite() {
-
-
-    const promises = [];
-
-    for (let i = 1; i <= 40; ++i) {
-        await calcSiteLife(i);
-                
-    }
-
-  // Promise.all(promises)
-  //     .then((results) => {
-  //         console.log("All done", results);
-  //     })
-  //     .catch((e) => {
-  //         // Handle errors here
-  //     });
- 
 }
 
 function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
@@ -1090,581 +1254,8 @@ function simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar
      */
 }
 
-async function calcSiteLife(year) {
-    await Excel.run (async(context) => {
-        var startReading, mode, augSchedule, battCutOff, oversize, isManualDeg, manualAugTable, battChem, solarLife, windLife, battLife, inputSheet, genSheet, outSheet, appSheet, battSheet, solarAnnualDeg, windAnnualDeg, dispatchSheet, inputTable, baseSolar_l0, baseSolar_l1, baseWind_l1, baseLoad_l3, time, appDefTable, appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd, wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable, solarPPA, windPPA, sampleOutput, sampleOuput_5, outputAnnualSummary, inputs, i, numTimestamps, solarEnabled, mppEnabled, inverterEnabled, windEnabled, genEnabled, battEnabled, limitedLoad, ac, curtailSrc, curtailSolar, chargeSrc, chargeSolar, chargeWind, chargeSolarPlusWind, poiLineLoss_math, poiLimit, poiXfmrOverride, poiXfmrOverrideVal, poiXfmrNum, solarPPAMethod, windPPAMethod, solarPPAFixed, windPPAFixed, solarPPAPrice, windPPAPrice, fixedPPA, ppaPrice, baseSolar, baseSolarInverter, panelCapacity, solarInverterCapacity, solarXfmrNum, solarLineLoss_math, solarXfmrOverride, solarXfmrOverrideVal, solarInvOverride, solarInvOverrideVal, baseWind, windCapacity, windLineLoss_math, windXfmrNum, windXfmrOverride, windXfmrOverrideVal, battLineLoss_math, battXfmrNum, battPowerPOI, battEnergyPOI, battPower, battEnergy, nConvert, startRatio, fullRenewCharge, buffer, battXfmrOverride, battXfmrOverrideVal, battInvOverride, battInvOverrideVal, battConvOverride, battConvOverrideVal, battDisEffOverride, battDisEffOverrideVal, battChaEffOverride, battChaEffOverrideVal, battDisEff_math, battChaEff_math, solarLineEff, windLineEff, battLineEff, battLineEff, poiLineEff, poiXfmrEff_math, battBOSEff, ratedSolarEff, ratedWindEff, ratedBattEff, ratedBattEff, battChargeEnergy, useCaseCodes, usedApps, ppa, poiLimitArray, siteOutput_l3, netBattPOI_l3, netSolarPOI_l3, netWindPOI_l3, battChaSolarDC_l0, battChaSolarAC_l2, battChaWind_l2, battDisPOI_l3, battChaPOI_l3, annualOut, dayOfYear, start, solarMPP_l0, solarAC_l1, solarAC_l2, solarAC_l3, pvs_DCCoupled_l2, windAC_l1, windAC_l2, windAC_l3, solarClipMPP_l0, solarClipAC_l2, windClipAC_l2, totalClipAC_l2, dayClipAC_l2, dayGenAC_l2, daySolarClipMPP_l0, daySolarMPP_l0, daySolarAC_l2, dayWindAC_l2, daySolarClipAC_l2, dayWindClipAC_l2, solarOnlyInvEff, solarOnlyXfmrEff, pvsInvEff, pvsXfmrEff, windXfmrEff, endReading, i, vNow, vMonth, vHour, vDay, vWeekend, diff, oneDay, day, vUseCaseCode, vPPA, vPPA, vPPA, vPOILimit, vSolarPowerRatio, vWindPowerRatio, vSolarOnlyAC, vWindGen, vMPPGen_l0, vInvEff, vSolarAC_l1, vSolarClipMPP_l0, vMPPGen_l0, vSolarAC_l1, vSolarClipMPP_l0, vXfmrEff, vSolarAC_l2, vWindGen_l1, vXfmrEff, vWindAC_l2, vPotentialSolar_l3, vPotetialWind_l3, vSolarLimit, vWindLimit, vWindLimit, vSolarLimit, vCombinedPowerRatio, vPOIRouteEff, vSolarAC_l3, vWindAC_l3, vSolarClipAC_l2, vWindClipAC_l2, acClipByDay_l2, acGenByDay_l2, dcClipByDay_l0, dcGenByDay_l0, acSolarByDay_l2, acWindByDay_l2, acWindClipByDay_l2, acSolarClipByDay_l2, i, d, i, d_1, netDischarge_l0, netGrdCharge_l0, netAutCharge_l0, solarCharge_l0, solarCharge_l2, windCharge_l2, grdCharge_l3, netCharge_l0, socHE, socHS, socPercentHE, chaEff, disEff, appCodes, appThr_l3, appCap, appThr_l2, appThr_l0, appThr_Plan_l0, appCap_Plan, appType, appPriceSrc, appITCQual, enePrice, capPrice, startCycleCount, startSOC, battCapMulti, cumCycles, battEffLoss, battIdleLoad, battState, i, now, month, hour, day, weekend, vSolarMPP_l0, vSolarAC_l2, vWindAC_l2, vUseNum, aAppCodes, aAppCap_Plan, aAppThr_Plan_l0, aAppCap, aAppThr_l0, aAppThr_l2, aAppThr_l3, aAppType, aAppPriceSrc, aAppITCQual, aEnePrice, aCapPrice, vGeneration, vPOILimit, vBattSOCHS, vBattSOCHS, vNetDisThr_l0, vNetChaThr_l0, vMaxDis_l0, vMaxCha_l0, vStackLen, j, vAppThr_Plan_l0, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vCapPrice, vEnePrice, vEnePrice, vCapPrice, vEnePrice, vEnePrice, vThisDaySolarClipAC_l2, vThisDaySolarClipDC_l0, vThisDayWindClipAC_l2, vThisDaySolarDC_l0, vThisDaySolarAC_l2, vThisDayWindAC_l2, vThisHourSolarAC_l2, vThisHourSolarDC_l0, vThisHourWindAC_l2, vThisHourSolarClipAC_l2, vThisHourSolarClipDC_l0, vThisHourWindClipAC_l2, vSolarTarget, vWindTarget, vSolarTarget, vWindTarget, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoCharge_l0, vAutoCharge_l0, vDisPower_l0, vBattDisEff, vDisPowerRatio, vBattDisEff, vChaPower_l0, vBattChaEff, vChaPowerRatio, vBattChaEff, vBattSOCHE, vBattEffLoss, vBattIdleLoad, vPVS_l0, vPVS_l1, vPVS_l2, vBattNetThr_l0, vBattNetPowerRatio, vBattInv, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattDis_l1, vXfmrEff, vBattDis_l2, vBattChaGrd_l1, vBattChaGrd_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattdis, vOptConvRatio, vConvEff, vBattDis_l0, vPVS_l0, vPVSPowerRatio, vInvEff, vXfmrEff, vPVS_l1, vPVS_l2, vACCoupledBattNetThr_l2, vBattDis_l1, vBattDis_l2, vBattChaGrd_l1, vBattCha_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l0, vInvEff, vXfmrEff, vNetSolar_l1, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattDis_l3, vBattChaGrd_l3, solarPPARev, windPPARev, endSimulation;
-        // Start reading inputs
-        startReading = performance.now();
-        inputSheet = context.workbook.worksheets.getItem("Calculations");
-        genSheet = context.workbook.worksheets.getItem("Generation");
-        outSheet = context.workbook.worksheets.getItem("Outputs");
-        appSheet = context.workbook.worksheets.getItem("Applications");
-        battSheet = context.workbook.worksheets.getItem("Battery");
-        dispatchSheet = context.workbook.worksheets.getItem("Dispatch");
-        inputTable = inputSheet.getRange("InputArray");
-        augSchedule = inputSheet.getRange("calcAugSchedule");
-        manualAugTable = inputSheet.getRange("calcManualDeg");
-        augSchedule.load("values");
-        manualAugTable.load("values");
-        inputTable.load("values");
-        mode8760 = inputSheet.getRange("mode8760");
-        mode8760.load("values");
-        baseSolar_l0 = genSheet.getRange("solarBaseMPP8760");
-        baseSolar_l0.load("values");
-        baseSolar_l1 = genSheet.getRange("solarBaseInverter8760");
-        baseSolar_l1.load("values");
-        baseWind_l1 = genSheet.getRange("windBaseMPP8760");
-        baseWind_l1.load("values");
-        baseLoad_l3 = genSheet.getRange("Load8760");
-        baseLoad_l3.load("values");
-        time = outSheet.getRange("timeStampCalc");
-        hourSeries = outSheet.getRange("hourSeries");
-        monthSeries = outSheet.getRange("monthSeries");
-        time.load("values");
-        monthSeries.load("values");
-        hourSeries.load("values");
-        appDefTable = appSheet.getRange("applicationDefTable");
-        appAllDayTable = appSheet.getRange("AllDayAppTable");
-        ept_wd = appSheet.getRange("energyPriceTable");
-        ept_we = appSheet.getRange("WeekendEnergyPrice");
-        cpt_wd = appSheet.getRange("capacityPriceTable");
-        cpt_we = appSheet.getRange("WeekendCapacityPrice");
-        solar_ppa_wd = appSheet.getRange("seasonalPPATable");
-        solar_ppa_we = appSheet.getRange("WeekendPPAPrice");
-        wind_ppa_wd = appSheet.getRange("windSeasonalWeekdayPPA");
-        wind_ppa_we = appSheet.getRange("windSeasonalWeekendPPA");
-        appDefTable.load("values");
-        appAllDayTable.load("values");
-        ept_wd.load("values");
-        ept_we.load("values");
-        cpt_wd.load("values");
-        cpt_we.load("values");
-        solar_ppa_wd.load("values");
-        solar_ppa_we.load("values");
-        wind_ppa_wd.load("values");
-        wind_ppa_we.load("values");
-        dispatchTable = dispatchSheet.getRange("dispatchTable");
-        useDefTable = dispatchSheet.getRange("useCaseTable");
-        usePowTable = dispatchSheet.getRange("UseCasePowerTable");
-        battStateTable = dispatchSheet.getRange("BattStateTable");
-        dispatchTable.load("values");
-        useDefTable.load("values");
-        usePowTable.load("values");
-        battStateTable.load("values");
-        // Sample Outputs
-        sampleOutput = outSheet.getRange("sampleOutput8760");
-        sampleOuput_5 = outSheet.getRange("sampleOuput_5");
-        // 8760 Simulation outputs
-        outPVWS = outSheet.getRange("outPVWS");
-        outBattDischarge_L3 = outSheet.getRange("outBattDischarge_L3");
-        outBattSOC = outSheet.getRange("outBattSOC");
-        outPVStandalone = outSheet.getRange("outPVStandalone");
-        outWindStandalone = outSheet.getRange("outWindStandalone");
-        outBattMaxDisCap = outSheet.getRange("outMaxDisCap");
-        outDataTable = outSheet.getRange("outDataTable");
-        // Simulation outputs
-        outputAnnualSummary = outSheet.getRange("outputAnnualSummary");
-        outSitekW_l3 = outSheet.getRange("outSitekW_l3");
-        outDisSitekW_l3 = outSheet.getRange("outDisSitekW_l3");
-        outChaSitekW_l3 = outSheet.getRange("outChaSitekW_l3");
-        outNetSolarkW_l3 = outSheet.getRange("outNetSolarkW_l3");
-        outNetWindkW_l3 = outSheet.getRange("outNetWindkW_l3");
-        // Read output cell references
-        monTable1 = outSheet.getRange("MonthlyOutTable1");
-        monTable2 = outSheet.getRange("MonthlyOutTable2");
-        monTable3 = outSheet.getRange("MonthlyOutTable3");
-        outDegTable = outSheet.getRange("outDegTable");
-        outputAnnualSummary.load("values");
-        outDataTable.load("values");
-        monTable1.load("values");
-        monTable2.load("values");
-        monTable3.load("values");
-        outDegTable.load("values");
-        // Read temporary table output ranges
-        tempMonTable1Range = "UP" + (5 + (year -1) * 48).toString() + ":" + "VA" + (5 + (year -1) * 48 + 47).toString();
-        tempMonTable1 = outSheet.getRange(tempMonTable1Range);
-        tempMonTable1.load("values");
-        tempMonTable2Range = "VD" + (5 + (year -1) * 9).toString() + ":" + "VO" + (5 + (year -1) * 9 + 8).toString();
-        tempMonTable2 = outSheet.getRange(tempMonTable2Range);
-        tempMonTable2.load("values");
-        tempMonTable3Range = "VR" + (5 + (year -1) * 9).toString() + ":" + "WC" + (5 + (year -1) * 9 + 8).toString();
-        tempMonTable3 = outSheet.getRange(tempMonTable3Range);
-        tempMonTable3.load("values");
-        
-        await context.sync();
-        {
-            // Process inputs
-            inputs = {};
-            for (i = 0; i < inputTable.values.length; i++) {
-                inputs[inputTable.values[i][0]] = inputTable.values[i][1];
-            }
-            numTimestamps = baseSolar_l0.values.length;
-            solarEnabled = inputs["Solar enabled"] == 1;
-            mppEnabled = inputs["MPP enabled"] == 1;
-            inverterEnabled = inputs["Inverter Enabled"] == 1;
-            windEnabled = inputs["Wind enabled"] == 1;
-            genEnabled = solarEnabled || windEnabled;
-            baseSolar = inputs["Base solar capacity"];
-            baseSolarInverter = inputs["Base solar inverter capacity"];
-            panelCapacity = inputs["Solar panel capacity"];
-            solarInverterCapacity = inputs["Solar inverter capacity"];
-            baseWind = inputs["Base wind capacity"];
-            windCapacity = inputs["Wind capacity"];
-            solarAnnualDeg = inputs["Panel degradation"];
-            windAnnualDeg = inputs["Wind degradation"];
-            solarLife = inputs["Solar life"];
-            windLife = inputs["Wind life"];
-            battLife = inputs["Storage life"];
-            mode = inputs["Run mode"];
-            isManualDeg = inputs["Manual degradation"];
-            battChem = inputs["Battery chemistry"];
-            battCutOff = inputs["Battery cut off"];
-            oversize = inputs["BoL battery oversize"];
-            // Start simulation
-            var startSimulation = performance.now();
-            var solarMPP_l0 = new Array(numTimestamps).fill([0]);
-            var solarAC_l1 = new Array(numTimestamps).fill([0]);
-            var windAC_l1 = new Array(numTimestamps).fill([0]);
-            var load_l3 = baseLoad_l3.values;
-            if (mode == "Lite") {
-                var projectLife = 1;
-            } else {
-                var projectLife = Math.max(solarLife, windLife, battLife);
-            }
-            {
-                var loopStart = performance.now()
-                if (true) {
-                    if (year == 1) {
-                        if (solarEnabled) {
-                            if (mppEnabled) {
-                                if (baseSolar > 0) {
-                                    var solarDCMulti = panelCapacity / baseSolar;
-                                } else {
-                                    var solarDCMulti = 0;
-                                }
-                                var solarMPP_l0 = scaleCol(baseSolar_l0.values, solarDCMulti);
-                            } else {
-                                if (baseSolarInverter > 0) {
-                                    var solarACMulti = solarInverterCapacity / baseSolarInverter;
-                                } else {
-                                    var solarACMulti = 0;
-                                }
-                                solarAC_l1 = scaleCol(baseSolar_l1.values, solarACMulti);
-                            }
-                        }
-                        if (windEnabled) {
-                            if (baseWind > 0) {
-                                var windACMulti = windCapacity / baseWind;
-                            } else {
-                                var windACMulti = 0;
-                            }
-                            windAC_l1 = scaleCol(baseWind_l1.values, windACMulti);
-                        }
-                        // Set simulation parameters
-                        var pars = inputs;
-                        var solar_l0 = solarMPP_l0;
-                        var solar_l1 = solarAC_l1;
-                        var wind_l1 = windAC_l1;
-                        var load_l3 = load_l3;
-                        var useCap = 1;
-                        // Run simulation
-                        var yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
-                            appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
-                            wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-                            monTable1, monTable2, monTable3, useCap);
-                        var data8760 = yearSim[0];
-                        var data8760Yr1 = data8760;
-                        // var outMonTable1 = yearSim[1];
-                        // var outMonTable2 = yearSim[2];
-                        // var outMonTable3 = yearSim[3];
-                        // Temp outputs
-                        var outTempTable1 = yearSim[1];
-                        var outTempTable2 = yearSim[2];
-                        var outTempTable3 = yearSim[3];
-                        
-                        // Calculate degradation for the life of the project
-                        var battDischargeArray = yearSim[4];
-                        var battSOCArray = yearSim[5];
-                        var period = 1;
-                        var battDegradation = calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, manualAugTable, augSchedule, oversize, battCutOff, inputs);
-                        var systemCapacity = battDegradation[0];
-                        var useableCapacity = battDegradation[1];
-                        var outDegTableValues = listToMatrix(systemCapacity, useableCapacity);
-                        // Write output
-                        // Disable excel calculations untill next at then end of the function
-                        var app = context.workbook.application;
-                        app.suspendApiCalculationUntilNextSync();
-                        outDataTable.values = data8760Yr1;
-                        outDegTable.values = outDegTableValues;
-                    } else {
-                        // Set simulation parameters
-                        if (solarEnabled) {
-                            if (mppEnabled) {
-                                if (baseSolar > 0) {
-                                    var solarDCMulti = panelCapacity / baseSolar * (Math.pow((1 - solarAnnualDeg), year - 1));
-                                } else {
-                                    var solarDCMulti = 0;
-                                }
-                                if (year > solarLife) {
-                                    var solarDCMulti = 0;
-                                }
-                                var solarMPP_l0 = scaleCol(baseSolar_l0.values, solarDCMulti);
-                            } else {
-                                if (baseSolarInverter > 0) {
-                                    var solarACMulti = solarInverterCapacity / baseSolarInverter * (Math.pow((1 - solarAnnualDeg), year - 1));
-                                } else {
-                                    var solarACMulti = 0;
-                                }
-                                if (year > solarLife) {
-                                    var solarACMulti = 0;
-                                }
-                                solarAC_l1 = scaleCol(baseSolar_l1.values, solarACMulti);
-                            }
-                        }
-                        if (windEnabled) {
-                            if (baseWind > 0) {
-                                var windACMulti = windCapacity / baseWind * (Math.pow((1 - windAnnualDeg), year - 1));
-                            } else {
-                                var windACMulti = 0;
-                            }
-                            if(year > windLife) {
-                                var windACMulti = 0;
-                            }
-                            windAC_l1 = scaleCol(baseWind_l1.values, windACMulti);
-                        }
-                        // Set simulation parameters
-                        var pars = inputs;
-                        var solar_l0 = solarMPP_l0;
-                        var solar_l1 = solarAC_l1;
-                        var wind_l1 = windAC_l1;
-                        var load_l3 = load_l3;
-                        // Update battery energy storage capacity
-                        var capTableY1 = outDegTable.values;
-                        if (year > battLife) {
-                            battEnabled = false;
-                            inputs["Battery enabled"] = 0;
-                        } else {
-                            useCap = capTableY1[year - 1][1];
-                        }
-                        // Run simulation
-                        yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
-                            appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
-                            wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-                            monTable1, monTable2, monTable3, useCap);
-                        data8760 = yearSim[0];
-                        // var outMonTable1_yr = yearSim[1];
-                        // var outMonTable2_yr = yearSim[2];
-                        // var outMonTable3_yr = yearSim[3];
-                        // Concatenate results
-                        // outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
-                        // outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
-                        // outMonTable3 = concatYear(outMonTable3, outMonTable3_yr);
-                        // Temp outputs
-                        var outTempTable1 = yearSim[1];
-                        var outTempTable2 = yearSim[2];
-                        var outTempTable3 = yearSim[3];
-                    }
-                    
-                } else {
-                    // outMonTable1 = concatYear(outMonTable1, emptyTable1);
-                    // outMonTable2 = concatYear(outMonTable2, emptyTable2);
-                    // outMonTable3 = concatYear(outMonTable3, emptyTable3);
-                    
-                }
-
-                var loopEnd = performance.now()
-                // Disable excel calculations untill next at then end of the function
-                var app = context.workbook.application;
-                app.suspendApiCalculationUntilNextSync();
-                tempMonTable1.values = outTempTable1;
-                tempMonTable2.values = outTempTable2;
-                tempMonTable3.values = outTempTable3;
-                console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
-                
-            }
-        }
-    })
-}
-
 // Calculate full system output matrix
-async function calcSite() {
-    return __awaiter(this, void 0, void 0, function () {
-        var _this = this;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, Excel.run(function (context) {
-                    return __awaiter(_this, void 0, void 0, function () {
-                        var startReading, mode, augSchedule, battCutOff, oversize, isManualDeg, manualAugTable, battChem, solarLife, windLife, battLife, inputSheet, genSheet, outSheet, appSheet, battSheet, solarAnnualDeg, windAnnualDeg, dispatchSheet, inputTable, baseSolar_l0, baseSolar_l1, baseWind_l1, baseLoad_l3, time, appDefTable, appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd, wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable, solarPPA, windPPA, sampleOutput, sampleOuput_5, outputAnnualSummary, inputs, i, numTimestamps, solarEnabled, mppEnabled, inverterEnabled, windEnabled, genEnabled, battEnabled, limitedLoad, ac, curtailSrc, curtailSolar, chargeSrc, chargeSolar, chargeWind, chargeSolarPlusWind, poiLineLoss_math, poiLimit, poiXfmrOverride, poiXfmrOverrideVal, poiXfmrNum, solarPPAMethod, windPPAMethod, solarPPAFixed, windPPAFixed, solarPPAPrice, windPPAPrice, fixedPPA, ppaPrice, baseSolar, baseSolarInverter, panelCapacity, solarInverterCapacity, solarXfmrNum, solarLineLoss_math, solarXfmrOverride, solarXfmrOverrideVal, solarInvOverride, solarInvOverrideVal, baseWind, windCapacity, windLineLoss_math, windXfmrNum, windXfmrOverride, windXfmrOverrideVal, battLineLoss_math, battXfmrNum, battPowerPOI, battEnergyPOI, battPower, battEnergy, nConvert, startRatio, fullRenewCharge, buffer, battXfmrOverride, battXfmrOverrideVal, battInvOverride, battInvOverrideVal, battConvOverride, battConvOverrideVal, battDisEffOverride, battDisEffOverrideVal, battChaEffOverride, battChaEffOverrideVal, battDisEff_math, battChaEff_math, solarLineEff, windLineEff, battLineEff, battLineEff, poiLineEff, poiXfmrEff_math, battBOSEff, ratedSolarEff, ratedWindEff, ratedBattEff, ratedBattEff, battChargeEnergy, useCaseCodes, usedApps, ppa, poiLimitArray, siteOutput_l3, netBattPOI_l3, netSolarPOI_l3, netWindPOI_l3, battChaSolarDC_l0, battChaSolarAC_l2, battChaWind_l2, battDisPOI_l3, battChaPOI_l3, annualOut, dayOfYear, start, solarMPP_l0, solarAC_l1, solarAC_l2, solarAC_l3, pvs_DCCoupled_l2, windAC_l1, windAC_l2, windAC_l3, solarClipMPP_l0, solarClipAC_l2, windClipAC_l2, totalClipAC_l2, dayClipAC_l2, dayGenAC_l2, daySolarClipMPP_l0, daySolarMPP_l0, daySolarAC_l2, dayWindAC_l2, daySolarClipAC_l2, dayWindClipAC_l2, solarOnlyInvEff, solarOnlyXfmrEff, pvsInvEff, pvsXfmrEff, windXfmrEff, endReading, i, vNow, vMonth, vHour, vDay, vWeekend, diff, oneDay, day, vUseCaseCode, vPPA, vPPA, vPPA, vPOILimit, vSolarPowerRatio, vWindPowerRatio, vSolarOnlyAC, vWindGen, vMPPGen_l0, vInvEff, vSolarAC_l1, vSolarClipMPP_l0, vMPPGen_l0, vSolarAC_l1, vSolarClipMPP_l0, vXfmrEff, vSolarAC_l2, vWindGen_l1, vXfmrEff, vWindAC_l2, vPotentialSolar_l3, vPotetialWind_l3, vSolarLimit, vWindLimit, vWindLimit, vSolarLimit, vCombinedPowerRatio, vPOIRouteEff, vSolarAC_l3, vWindAC_l3, vSolarClipAC_l2, vWindClipAC_l2, acClipByDay_l2, acGenByDay_l2, dcClipByDay_l0, dcGenByDay_l0, acSolarByDay_l2, acWindByDay_l2, acWindClipByDay_l2, acSolarClipByDay_l2, i, d, i, d_1, netDischarge_l0, netGrdCharge_l0, netAutCharge_l0, solarCharge_l0, solarCharge_l2, windCharge_l2, grdCharge_l3, netCharge_l0, socHE, socHS, socPercentHE, chaEff, disEff, appCodes, appThr_l3, appCap, appThr_l2, appThr_l0, appThr_Plan_l0, appCap_Plan, appType, appPriceSrc, appITCQual, enePrice, capPrice, startCycleCount, startSOC, battCapMulti, cumCycles, battEffLoss, battIdleLoad, battState, i, now, month, hour, day, weekend, vSolarMPP_l0, vSolarAC_l2, vWindAC_l2, vUseNum, aAppCodes, aAppCap_Plan, aAppThr_Plan_l0, aAppCap, aAppThr_l0, aAppThr_l2, aAppThr_l3, aAppType, aAppPriceSrc, aAppITCQual, aEnePrice, aCapPrice, vGeneration, vPOILimit, vBattSOCHS, vBattSOCHS, vNetDisThr_l0, vNetChaThr_l0, vMaxDis_l0, vMaxCha_l0, vStackLen, j, vAppThr_Plan_l0, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vCapPrice, vEnePrice, vEnePrice, vCapPrice, vEnePrice, vEnePrice, vThisDaySolarClipAC_l2, vThisDaySolarClipDC_l0, vThisDayWindClipAC_l2, vThisDaySolarDC_l0, vThisDaySolarAC_l2, vThisDayWindAC_l2, vThisHourSolarAC_l2, vThisHourSolarDC_l0, vThisHourWindAC_l2, vThisHourSolarClipAC_l2, vThisHourSolarClipDC_l0, vThisHourWindClipAC_l2, vSolarTarget, vWindTarget, vSolarTarget, vWindTarget, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoCharge_l0, vAutoCharge_l0, vDisPower_l0, vBattDisEff, vDisPowerRatio, vBattDisEff, vChaPower_l0, vBattChaEff, vChaPowerRatio, vBattChaEff, vBattSOCHE, vBattEffLoss, vBattIdleLoad, vPVS_l0, vPVS_l1, vPVS_l2, vBattNetThr_l0, vBattNetPowerRatio, vBattInv, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattDis_l1, vXfmrEff, vBattDis_l2, vBattChaGrd_l1, vBattChaGrd_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattdis, vOptConvRatio, vConvEff, vBattDis_l0, vPVS_l0, vPVSPowerRatio, vInvEff, vXfmrEff, vPVS_l1, vPVS_l2, vACCoupledBattNetThr_l2, vBattDis_l1, vBattDis_l2, vBattChaGrd_l1, vBattCha_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l0, vInvEff, vXfmrEff, vNetSolar_l1, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattDis_l3, vBattChaGrd_l3, solarPPARev, windPPARev, endSimulation;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    startReading = performance.now();
-                                    inputSheet = context.workbook.worksheets.getItem("Calculations");
-                                    genSheet = context.workbook.worksheets.getItem("Generation");
-                                    outSheet = context.workbook.worksheets.getItem("Outputs");
-                                    appSheet = context.workbook.worksheets.getItem("Applications");
-                                    battSheet = context.workbook.worksheets.getItem("Battery");
-                                    dispatchSheet = context.workbook.worksheets.getItem("Dispatch");
-                                    inputTable = inputSheet.getRange("InputArray");
-                                    augSchedule = inputSheet.getRange("calcAugSchedule");
-                                    manualAugTable = inputSheet.getRange("calcManualDeg");
-                                    augSchedule.load("values");
-                                    manualAugTable.load("values");
-                                    inputTable.load("values");
-                                    mode8760 = inputSheet.getRange("mode8760");
-                                    mode8760.load("values");
-                                    baseSolar_l0 = genSheet.getRange("solarBaseMPP8760");
-                                    baseSolar_l0.load("values");
-                                    baseSolar_l1 = genSheet.getRange("solarBaseInverter8760");
-                                    baseSolar_l1.load("values");
-                                    baseWind_l1 = genSheet.getRange("windBaseMPP8760");
-                                    baseWind_l1.load("values");
-                                    baseLoad_l3 = genSheet.getRange("Load8760");
-                                    baseLoad_l3.load("values");
-                                    time = outSheet.getRange("timeStampCalc");
-                                    hourSeries = outSheet.getRange("hourSeries");
-                                    monthSeries = outSheet.getRange("monthSeries");
-                                    time.load("values");
-                                    monthSeries.load("values");
-                                    hourSeries.load("values");
-                                    appDefTable = appSheet.getRange("applicationDefTable");
-                                    appAllDayTable = appSheet.getRange("AllDayAppTable");
-                                    ept_wd = appSheet.getRange("energyPriceTable");
-                                    ept_we = appSheet.getRange("WeekendEnergyPrice");
-                                    cpt_wd = appSheet.getRange("capacityPriceTable");
-                                    cpt_we = appSheet.getRange("WeekendCapacityPrice");
-                                    solar_ppa_wd = appSheet.getRange("seasonalPPATable");
-                                    solar_ppa_we = appSheet.getRange("WeekendPPAPrice");
-                                    wind_ppa_wd = appSheet.getRange("windSeasonalWeekdayPPA");
-                                    wind_ppa_we = appSheet.getRange("windSeasonalWeekendPPA");
-                                    appDefTable.load("values");
-                                    appAllDayTable.load("values");
-                                    ept_wd.load("values");
-                                    ept_we.load("values");
-                                    cpt_wd.load("values");
-                                    cpt_we.load("values");
-                                    solar_ppa_wd.load("values");
-                                    solar_ppa_we.load("values");
-                                    wind_ppa_wd.load("values");
-                                    wind_ppa_we.load("values");
-                                    dispatchTable = dispatchSheet.getRange("dispatchTable");
-                                    useDefTable = dispatchSheet.getRange("useCaseTable");
-                                    usePowTable = dispatchSheet.getRange("UseCasePowerTable");
-                                    battStateTable = dispatchSheet.getRange("BattStateTable");
-                                    dispatchTable.load("values");
-                                    useDefTable.load("values");
-                                    usePowTable.load("values");
-                                    battStateTable.load("values");
-                                    // Sample Outputs
-                                    sampleOutput = outSheet.getRange("sampleOutput8760");
-                                    sampleOuput_5 = outSheet.getRange("sampleOuput_5");
-                                    // 8760 Simulation outputs
-                                    outPVWS = outSheet.getRange("outPVWS");
-                                    outBattDischarge_L3 = outSheet.getRange("outBattDischarge_L3");
-                                    outBattSOC = outSheet.getRange("outBattSOC");
-                                    outPVStandalone = outSheet.getRange("outPVStandalone");
-                                    outWindStandalone = outSheet.getRange("outWindStandalone");
-                                    outBattMaxDisCap = outSheet.getRange("outMaxDisCap");
-                                    outDataTable = outSheet.getRange("outDataTable");
-                                    // Simulation outputs
-                                    outputAnnualSummary = outSheet.getRange("outputAnnualSummary");
-                                    outSitekW_l3 = outSheet.getRange("outSitekW_l3");
-                                    outDisSitekW_l3 = outSheet.getRange("outDisSitekW_l3");
-                                    outChaSitekW_l3 = outSheet.getRange("outChaSitekW_l3");
-                                    outNetSolarkW_l3 = outSheet.getRange("outNetSolarkW_l3");
-                                    outNetWindkW_l3 = outSheet.getRange("outNetWindkW_l3");
 
-                                    monTable1 = outSheet.getRange("MonthlyOutTable1");
-                                    monTable2 = outSheet.getRange("MonthlyOutTable2");
-                                    monTable3 = outSheet.getRange("MonthlyOutTable3");
-
-                                    outputAnnualSummary.load("values");
-                                    outDataTable.load("values");
-                                    monTable1.load("values");
-                                    monTable2.load("values");
-                                    monTable3.load("values");
-                                    return [4 /*yield*/, context.sync()];
-                                case 1:
-                                    _a.sent();
-                                    inputs = {};
-                                    for (i = 0; i < inputTable.values.length; i++) {
-                                        inputs[inputTable.values[i][0]] = inputTable.values[i][1];
-                                    }
-                                    numTimestamps = baseSolar_l0.values.length;
-                                    solarEnabled = inputs["Solar enabled"] == 1;
-                                    mppEnabled = inputs["MPP enabled"] == 1;
-                                    inverterEnabled = inputs["Inverter Enabled"] == 1;
-                                    windEnabled = inputs["Wind enabled"] == 1;
-                                    genEnabled = solarEnabled || windEnabled;
-                                    baseSolar = inputs["Base solar capacity"];
-                                    baseSolarInverter = inputs["Base solar inverter capacity"];
-                                    panelCapacity = inputs["Solar panel capacity"];
-                                    solarInverterCapacity = inputs["Solar inverter capacity"];
-                                    baseWind = inputs["Base wind capacity"];
-                                    windCapacity = inputs["Wind capacity"];
-                                    solarAnnualDeg = inputs["Panel degradation"];
-                                    windAnnualDeg = inputs["Wind degradation"];
-                                    solarLife = inputs["Solar life"];
-                                    windLife = inputs["Wind life"];
-                                    battLife = inputs["Storage life"];
-                                    mode = inputs["Run mode"];
-                                    isManualDeg = inputs["Manual degradation"];
-                                    battChem = inputs["Battery chemistry"];
-                                    battCutOff = inputs["Battery cut off"];
-                                    oversize = inputs["BoL battery oversize"];
-
-                                    // Start simulation
-                                    var startSimulation = performance.now();
-                                    var solarMPP_l0 = new Array(numTimestamps).fill([0]);
-                                    var solarAC_l1 = new Array(numTimestamps).fill([0]);
-                                    var windAC_l1 = new Array(numTimestamps).fill([0]);
-                                    var load_l3 = baseLoad_l3.values;
-                                    if (mode == "Lite") {
-                                        var projectLife = 1;
-                                    } else {
-                                        var projectLife = Math.max(solarLife, windLife, battLife);
-                                    }
-                                    var maxModelLife = 40;
-                                    // Calculate generation and battery capacity
-                                    for (let year = 1; year <= maxModelLife; year++) {
-                                        var loopStart = performance.now()
-                                        if (year <= projectLife) {
-                                            if (year == 1) {
-                                                if (solarEnabled) {
-                                                    if (mppEnabled) {
-                                                        if (baseSolar > 0) {
-                                                            var solarDCMulti = panelCapacity / baseSolar;
-                                                        } else {
-                                                            var solarDCMulti = 0;
-                                                        }
-                                                        var solarMPP_l0 = scaleCol(baseSolar_l0.values, solarDCMulti);
-                                                    } else {
-                                                        if (baseSolarInverter > 0) {
-                                                            var solarACMulti = solarInverterCapacity / baseSolarInverter;
-                                                        } else {
-                                                            var solarACMulti = 0;
-                                                        }
-                                                        solarAC_l1 = scaleCol(baseSolar_l1.values, solarACMulti);
-                                                    }
-                                                }
-                                                if (windEnabled) {
-                                                    if (baseWind > 0) {
-                                                        var windACMulti = windCapacity / baseWind;
-                                                    } else {
-                                                        var windACMulti = 0;
-                                                    }
-                                                    windAC_l1 = scaleCol(baseWind_l1.values, windACMulti);
-                                                }
-                                                // Set simulation parameters
-                                                var pars = inputs;
-                                                var solar_l0 = solarMPP_l0;
-                                                var solar_l1 = solarAC_l1;
-                                                var wind_l1 = windAC_l1;
-                                                var load_l3 = load_l3;
-                                                var useCap = 1;
-                                                // Run simulation
-                                                var yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
-                                                    appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
-                                                    wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-                                                    monTable1, monTable2, monTable3, useCap);
-                                                var data8760 = yearSim[0];
-                                                var data8760Yr1 = data8760;
-                                                var outMonTable1 = yearSim[1];
-                                                var outMonTable2 = yearSim[2];
-                                                var outMonTable3 = yearSim[3];
-                                                var emptyTable1 = new Array(outMonTable1.length).fill(new Array(12).fill(0));
-                                                var emptyTable2 = new Array(outMonTable2.length).fill(new Array(12).fill(0));
-                                                var emptyTable3 = new Array(outMonTable3.length).fill(new Array(12).fill(0));
-                                                // Calculate degradation for the life of the project
-                                                var battDischargeArray = yearSim[4];
-                                                var battSOCArray = yearSim[5];
-                                                var period = 1;
-                                                var battDegradation = calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, manualAugTable, augSchedule, oversize, battCutOff, inputs);
-                                                var systemCapacity = battDegradation[0];
-                                                var useableCapacity = battDegradation[1];
-                                            } else {
-                                                // Set simulation parameters
-                                                // Update generation if generator life is not exceeded
-                                                if (year > solarLife) {
-                                                    solarEnabled = false;
-                                                    inputs["Solar enabled"] = 0;
-                                                } else {
-                                                    if (mppEnabled) {
-                                                        solar_l0 = scaleCol(solar_l0, (1 - solarAnnualDeg));
-                                                    } else {
-                                                        solar_l1 = scaleCol(solar_l1, (1 - solarAnnualDeg));
-                                                    }
-                                                }
-                                                if (year > windLife) {
-                                                    windEnabled = false;
-                                                    inputs["Wind enabled"] = 0;
-                                                } else {
-                                                    wind_l1 = scaleCol(wind_l1, (1 - windAnnualDeg));
-                                                }
-                                                // Update battery energy storage capacity
-                                                if (year > battLife) {
-                                                    battEnabled = false;
-                                                    inputs["Battery enabled"] = 0;
-                                                } else {
-                                                    useCap = useableCapacity[year - 1];
-                                                }
-                                                // Run simulation
-                                                yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
-                                                    appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
-                                                    wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
-                                                    monTable1, monTable2, monTable3, useCap);
-                                                data8760 = yearSim[0];
-                                                var outMonTable1_yr = yearSim[1];
-                                                var outMonTable2_yr = yearSim[2];
-                                                var outMonTable3_yr = yearSim[3];
-                                                // Concatenate results
-                                                outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
-                                                outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
-                                                outMonTable3 = concatYear(outMonTable3, outMonTable3_yr);
-                                            }
-                                            
-                                        } else {
-                                            outMonTable1 = concatYear(outMonTable1, emptyTable1);
-                                            outMonTable2 = concatYear(outMonTable2, emptyTable2);
-                                            outMonTable3 = concatYear(outMonTable3, emptyTable3);
-                                        }
-
-                                        var loopEnd = performance.now()
-                                        //console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
-                                    }
-
-                                    // Disable excel calculations untill next at then end of the function
-                                    var app = context.workbook.application;
-                                    app.suspendApiCalculationUntilNextSync();
-
-                                    // Write output tables
-                                    monTable1.values = outMonTable1;
-                                    monTable2.values = outMonTable2;
-                                    monTable3.values = outMonTable3;
-                                    mode8760.values = 1;
-                                    outDataTable.values = data8760Yr1;
-
-                                    // End simulation
-                                    var endSimulation = performance.now();
-                                    // Print output
-                                    console.log("Simulation complete!");
-                                    console.log((Math.round((endSimulation - startSimulation))).toString() + " ms")
-                                    console.log(("Version: 20.12.3"))
-
-                                    return [2 /*return*/];
-                            }
-                        });
-                    });
-                })];
-                case 1:
-                    _a.sent();
-                    return [2 /*return*/];
-            }
-        });
-    });
-
-
-}
 
 // Calculate battery degradation
 function calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, ManualDeg, augSchedule, oversize, cutOff, inputs) {
@@ -1701,7 +1292,7 @@ function calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, 
     if (nCycles == 0) {
         equivCycles = 1;
     } else {
-        equivCycles = nCycles * nCycles / (nCycles * (-0.0000048059 * (100 / (1 + oversize)) ** 3 + 0.0018 * (100 / (1 + oversize)) ** 2 - 0.2196 * (100 / (1 + oversize)) + 9.7659)) 
+        equivCycles = nCycles * nCycles / (nCycles * (-0.0000048059 * (100 / (1 + oversize)) ** 3 + 0.0018 * (100 / (1 + oversize)) ** 2 - 0.2196 * (100 / (1 + oversize)) + 9.7659))
     }
     // Calculate original battery degradation
     for (let j = 0; j < 41; j++) {
@@ -1748,15 +1339,6 @@ function concatYear(table1, table2) {
         table1[i] = prevRow.concat(newRow);
     }
     return table1;
-}
-
-function listToMatrix(list1, list2){
-    var excelTable = [];
-    for (let i = 0; i < list1.length; i++) {
-        var row = [list1[i], list2[i]];
-        excelTable.push(row);
-    }
-    return excelTable;
 }
 
 function calcBattDeg(period, rSOC, battChem, equivCycles) {
@@ -1842,7 +1424,7 @@ function calcBattDeg(period, rSOC, battChem, equivCycles) {
     else if (battChem == "LTO") {
         systemCap = 1 - (1 - (100 + (-0.0025 * period ** 3 + 0.07 * period ** 2 - 2.0521 * period) * Math.exp(365 / 25000 / 2) * equivCycles / 365 * 5000 / 25000) / 100);
     }
-        
+
     return systemCap;
 }
 
@@ -1993,24 +1575,24 @@ function calcBattEff(powerRatio) {
 }
 // Convert Excel date to serial
 function excelDateToJSDate(serial) {
-   var utc_days  = Math.floor(serial - 25568);
-   var utc_value = utc_days * 86400;                                        
-   var date_info = new Date(utc_value * 1000);
+    var utc_days = Math.floor(serial - 25568);
+    var utc_value = utc_days * 86400;
+    var date_info = new Date(utc_value * 1000);
 
-   var fractional_day = serial - Math.floor(serial) + 0.0000001;
+    var fractional_day = serial - Math.floor(serial) + 0.0000001;
 
-   var total_seconds = Math.floor(86400 * fractional_day);
+    var total_seconds = Math.floor(86400 * fractional_day);
 
-   var seconds = total_seconds % 60;
+    var seconds = total_seconds % 60;
 
-   total_seconds -= seconds;
+    total_seconds -= seconds;
 
-   var hours = Math.floor(total_seconds / (60 * 60) - 6);
+    var hours = Math.floor(total_seconds / (60 * 60) - 6);
 
-   var minutes = Math.floor(total_seconds / 60) % 60;
+    var minutes = Math.floor(total_seconds / 60) % 60;
 
 
-   return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
+    return new Date(date_info.getFullYear(), date_info.getMonth(), date_info.getDate(), hours, minutes, seconds);
 }
 
 // Calculate 8760 revenue for a given application as a 2D lis
@@ -2077,3 +1659,356 @@ function calcIdleLoad(battState, ratedPower) {
         return (530 / 100000 / 2.5) * ratedPower * 0.25;
     }
 }
+
+async function calcSiteLife(year) {
+    await Excel.run (async(context) => {
+        var startReading, mode, augSchedule, battCutOff, oversize, isManualDeg, manualAugTable, battChem, solarLife, windLife, battLife, inputSheet, genSheet, outSheet, appSheet, battSheet, solarAnnualDeg, windAnnualDeg, dispatchSheet, inputTable, baseSolar_l0, baseSolar_l1, baseWind_l1, baseLoad_l3, time, appDefTable, appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd, wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable, solarPPA, windPPA, sampleOutput, sampleOuput_5, outputAnnualSummary, inputs, i, numTimestamps, solarEnabled, mppEnabled, inverterEnabled, windEnabled, genEnabled, battEnabled, limitedLoad, ac, curtailSrc, curtailSolar, chargeSrc, chargeSolar, chargeWind, chargeSolarPlusWind, poiLineLoss_math, poiLimit, poiXfmrOverride, poiXfmrOverrideVal, poiXfmrNum, solarPPAMethod, windPPAMethod, solarPPAFixed, windPPAFixed, solarPPAPrice, windPPAPrice, fixedPPA, ppaPrice, baseSolar, baseSolarInverter, panelCapacity, solarInverterCapacity, solarXfmrNum, solarLineLoss_math, solarXfmrOverride, solarXfmrOverrideVal, solarInvOverride, solarInvOverrideVal, baseWind, windCapacity, windLineLoss_math, windXfmrNum, windXfmrOverride, windXfmrOverrideVal, battLineLoss_math, battXfmrNum, battPowerPOI, battEnergyPOI, battPower, battEnergy, nConvert, startRatio, fullRenewCharge, buffer, battXfmrOverride, battXfmrOverrideVal, battInvOverride, battInvOverrideVal, battConvOverride, battConvOverrideVal, battDisEffOverride, battDisEffOverrideVal, battChaEffOverride, battChaEffOverrideVal, battDisEff_math, battChaEff_math, solarLineEff, windLineEff, battLineEff, battLineEff, poiLineEff, poiXfmrEff_math, battBOSEff, ratedSolarEff, ratedWindEff, ratedBattEff, ratedBattEff, battChargeEnergy, useCaseCodes, usedApps, ppa, poiLimitArray, siteOutput_l3, netBattPOI_l3, netSolarPOI_l3, netWindPOI_l3, battChaSolarDC_l0, battChaSolarAC_l2, battChaWind_l2, battDisPOI_l3, battChaPOI_l3, annualOut, dayOfYear, start, solarMPP_l0, solarAC_l1, solarAC_l2, solarAC_l3, pvs_DCCoupled_l2, windAC_l1, windAC_l2, windAC_l3, solarClipMPP_l0, solarClipAC_l2, windClipAC_l2, totalClipAC_l2, dayClipAC_l2, dayGenAC_l2, daySolarClipMPP_l0, daySolarMPP_l0, daySolarAC_l2, dayWindAC_l2, daySolarClipAC_l2, dayWindClipAC_l2, solarOnlyInvEff, solarOnlyXfmrEff, pvsInvEff, pvsXfmrEff, windXfmrEff, endReading, i, vNow, vMonth, vHour, vDay, vWeekend, diff, oneDay, day, vUseCaseCode, vPPA, vPPA, vPPA, vPOILimit, vSolarPowerRatio, vWindPowerRatio, vSolarOnlyAC, vWindGen, vMPPGen_l0, vInvEff, vSolarAC_l1, vSolarClipMPP_l0, vMPPGen_l0, vSolarAC_l1, vSolarClipMPP_l0, vXfmrEff, vSolarAC_l2, vWindGen_l1, vXfmrEff, vWindAC_l2, vPotentialSolar_l3, vPotetialWind_l3, vSolarLimit, vWindLimit, vWindLimit, vSolarLimit, vCombinedPowerRatio, vPOIRouteEff, vSolarAC_l3, vWindAC_l3, vSolarClipAC_l2, vWindClipAC_l2, acClipByDay_l2, acGenByDay_l2, dcClipByDay_l0, dcGenByDay_l0, acSolarByDay_l2, acWindByDay_l2, acWindClipByDay_l2, acSolarClipByDay_l2, i, d, i, d_1, netDischarge_l0, netGrdCharge_l0, netAutCharge_l0, solarCharge_l0, solarCharge_l2, windCharge_l2, grdCharge_l3, netCharge_l0, socHE, socHS, socPercentHE, chaEff, disEff, appCodes, appThr_l3, appCap, appThr_l2, appThr_l0, appThr_Plan_l0, appCap_Plan, appType, appPriceSrc, appITCQual, enePrice, capPrice, startCycleCount, startSOC, battCapMulti, cumCycles, battEffLoss, battIdleLoad, battState, i, now, month, hour, day, weekend, vSolarMPP_l0, vSolarAC_l2, vWindAC_l2, vUseNum, aAppCodes, aAppCap_Plan, aAppThr_Plan_l0, aAppCap, aAppThr_l0, aAppThr_l2, aAppThr_l3, aAppType, aAppPriceSrc, aAppITCQual, aEnePrice, aCapPrice, vGeneration, vPOILimit, vBattSOCHS, vBattSOCHS, vNetDisThr_l0, vNetChaThr_l0, vMaxDis_l0, vMaxCha_l0, vStackLen, j, vAppThr_Plan_l0, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vCapPrice, vEnePrice, vEnePrice, vCapPrice, vEnePrice, vEnePrice, vThisDaySolarClipAC_l2, vThisDaySolarClipDC_l0, vThisDayWindClipAC_l2, vThisDaySolarDC_l0, vThisDaySolarAC_l2, vThisDayWindAC_l2, vThisHourSolarAC_l2, vThisHourSolarDC_l0, vThisHourWindAC_l2, vThisHourSolarClipAC_l2, vThisHourSolarClipDC_l0, vThisHourWindClipAC_l2, vSolarTarget, vWindTarget, vSolarTarget, vWindTarget, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoCharge_l0, vAutoCharge_l0, vDisPower_l0, vBattDisEff, vDisPowerRatio, vBattDisEff, vChaPower_l0, vBattChaEff, vChaPowerRatio, vBattChaEff, vBattSOCHE, vBattEffLoss, vBattIdleLoad, vPVS_l0, vPVS_l1, vPVS_l2, vBattNetThr_l0, vBattNetPowerRatio, vBattInv, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattDis_l1, vXfmrEff, vBattDis_l2, vBattChaGrd_l1, vBattChaGrd_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattdis, vOptConvRatio, vConvEff, vBattDis_l0, vPVS_l0, vPVSPowerRatio, vInvEff, vXfmrEff, vPVS_l1, vPVS_l2, vACCoupledBattNetThr_l2, vBattDis_l1, vBattDis_l2, vBattChaGrd_l1, vBattCha_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l0, vInvEff, vXfmrEff, vNetSolar_l1, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3, vBattDis_l3, vBattChaGrd_l3, solarPPARev, windPPARev, endSimulation;
+        // Start reading inputs
+        startReading = performance.now();
+        inputSheet = context.workbook.worksheets.getItem("Calculations");
+        genSheet = context.workbook.worksheets.getItem("Generation");
+        outSheet = context.workbook.worksheets.getItem("Outputs");
+        appSheet = context.workbook.worksheets.getItem("Applications");
+        battSheet = context.workbook.worksheets.getItem("Battery");
+        dispatchSheet = context.workbook.worksheets.getItem("Dispatch");
+        inputTable = inputSheet.getRange("InputArray");
+        augSchedule = inputSheet.getRange("calcAugSchedule");
+        manualAugTable = inputSheet.getRange("calcManualDeg");
+        augSchedule.load("values");
+        manualAugTable.load("values");
+        inputTable.load("values");
+        mode8760 = inputSheet.getRange("mode8760");
+        mode8760.load("values");
+        baseSolar_l0 = genSheet.getRange("solarBaseMPP8760");
+        baseSolar_l0.load("values");
+        baseSolar_l1 = genSheet.getRange("solarBaseInverter8760");
+        baseSolar_l1.load("values");
+        baseWind_l1 = genSheet.getRange("windBaseMPP8760");
+        baseWind_l1.load("values");
+        baseLoad_l3 = genSheet.getRange("Load8760");
+        baseLoad_l3.load("values");
+        time = outSheet.getRange("timeStampCalc");
+        hourSeries = outSheet.getRange("hourSeries");
+        monthSeries = outSheet.getRange("monthSeries");
+        time.load("values");
+        monthSeries.load("values");
+        hourSeries.load("values");
+        appDefTable = appSheet.getRange("applicationDefTable");
+        appAllDayTable = appSheet.getRange("AllDayAppTable");
+        ept_wd = appSheet.getRange("energyPriceTable");
+        ept_we = appSheet.getRange("WeekendEnergyPrice");
+        cpt_wd = appSheet.getRange("capacityPriceTable");
+        cpt_we = appSheet.getRange("WeekendCapacityPrice");
+        solar_ppa_wd = appSheet.getRange("seasonalPPATable");
+        solar_ppa_we = appSheet.getRange("WeekendPPAPrice");
+        wind_ppa_wd = appSheet.getRange("windSeasonalWeekdayPPA");
+        wind_ppa_we = appSheet.getRange("windSeasonalWeekendPPA");
+        appDefTable.load("values");
+        appAllDayTable.load("values");
+        ept_wd.load("values");
+        ept_we.load("values");
+        cpt_wd.load("values");
+        cpt_we.load("values");
+        solar_ppa_wd.load("values");
+        solar_ppa_we.load("values");
+        wind_ppa_wd.load("values");
+        wind_ppa_we.load("values");
+        dispatchTable = dispatchSheet.getRange("dispatchTable");
+        useDefTable = dispatchSheet.getRange("useCaseTable");
+        usePowTable = dispatchSheet.getRange("UseCasePowerTable");
+        battStateTable = dispatchSheet.getRange("BattStateTable");
+        dispatchTable.load("values");
+        useDefTable.load("values");
+        usePowTable.load("values");
+        battStateTable.load("values");
+        // Sample Outputs
+        sampleOutput = outSheet.getRange("sampleOutput8760");
+        sampleOuput_5 = outSheet.getRange("sampleOuput_5");
+        // 8760 Simulation outputs
+        outPVWS = outSheet.getRange("outPVWS");
+        outBattDischarge_L3 = outSheet.getRange("outBattDischarge_L3");
+        outBattSOC = outSheet.getRange("outBattSOC");
+        outPVStandalone = outSheet.getRange("outPVStandalone");
+        outWindStandalone = outSheet.getRange("outWindStandalone");
+        outBattMaxDisCap = outSheet.getRange("outMaxDisCap");
+        outDataTable = outSheet.getRange("outDataTable");
+        // Simulation outputs
+        outputAnnualSummary = outSheet.getRange("outputAnnualSummary");
+        outSitekW_l3 = outSheet.getRange("outSitekW_l3");
+        outDisSitekW_l3 = outSheet.getRange("outDisSitekW_l3");
+        outChaSitekW_l3 = outSheet.getRange("outChaSitekW_l3");
+        outNetSolarkW_l3 = outSheet.getRange("outNetSolarkW_l3");
+        outNetWindkW_l3 = outSheet.getRange("outNetWindkW_l3");
+        // Read output cell references
+        monTable1 = outSheet.getRange("MonthlyOutTable1");
+        monTable2 = outSheet.getRange("MonthlyOutTable2");
+        monTable3 = outSheet.getRange("MonthlyOutTable3");
+        outDegTable = outSheet.getRange("outDegTable");
+        outputAnnualSummary.load("values");
+        outDataTable.load("values");
+        monTable1.load("values");
+        monTable2.load("values");
+        monTable3.load("values");
+        outDegTable.load("values");
+        // Read temporary table output ranges
+        tempMonTable1Range = "UP" + (5 + (year -1) * 48).toString() + ":" + "VA" + (5 + (year -1) * 48 + 47).toString();
+        tempMonTable1 = outSheet.getRange(tempMonTable1Range);
+        tempMonTable1.load("values");
+        tempMonTable2Range = "VD" + (5 + (year -1) * 9).toString() + ":" + "VO" + (5 + (year -1) * 9 + 8).toString();
+        tempMonTable2 = outSheet.getRange(tempMonTable2Range);
+        tempMonTable2.load("values");
+        tempMonTable3Range = "VR" + (5 + (year -1) * 9).toString() + ":" + "WC" + (5 + (year -1) * 9 + 8).toString();
+        tempMonTable3 = outSheet.getRange(tempMonTable3Range);
+        tempMonTable3.load("values");
+
+
+        await context.sync();
+        {
+            // Process inputs
+            inputs = {};
+            for (i = 0; i < inputTable.values.length; i++) {
+                inputs[inputTable.values[i][0]] = inputTable.values[i][1];
+            }
+            numTimestamps = baseSolar_l0.values.length;
+            solarEnabled = inputs["Solar enabled"] == 1;
+            mppEnabled = inputs["MPP enabled"] == 1;
+            inverterEnabled = inputs["Inverter Enabled"] == 1;
+            windEnabled = inputs["Wind enabled"] == 1;
+            genEnabled = solarEnabled || windEnabled;
+            baseSolar = inputs["Base solar capacity"];
+            baseSolarInverter = inputs["Base solar inverter capacity"];
+            panelCapacity = inputs["Solar panel capacity"];
+            solarInverterCapacity = inputs["Solar inverter capacity"];
+            baseWind = inputs["Base wind capacity"];
+            windCapacity = inputs["Wind capacity"];
+            solarAnnualDeg = inputs["Panel degradation"];
+            windAnnualDeg = inputs["Wind degradation"];
+            solarLife = inputs["Solar life"];
+            windLife = inputs["Wind life"];
+            battLife = inputs["Storage life"];
+            mode = inputs["Run mode"];
+            isManualDeg = inputs["Manual degradation"];
+            battChem = inputs["Battery chemistry"];
+            battCutOff = inputs["Battery cut off"];
+            oversize = inputs["BoL battery oversize"];
+            // Start simulation
+            var startSimulation = performance.now();
+            var solarMPP_l0 = new Array(numTimestamps).fill([0]);
+            var solarAC_l1 = new Array(numTimestamps).fill([0]);
+            var windAC_l1 = new Array(numTimestamps).fill([0]);
+            var load_l3 = baseLoad_l3.values;
+            if (mode == "Lite") {
+                var projectLife = 1;
+            } else {
+                var projectLife = Math.max(solarLife, windLife, battLife);
+            }
+            {
+                var loopStart = performance.now()
+                if (true) {
+                    if (year == 1) {
+                        if (solarEnabled) {
+                            if (mppEnabled) {
+                                if (baseSolar > 0) {
+                                    var solarDCMulti = panelCapacity / baseSolar;
+                                } else {
+                                    var solarDCMulti = 0;
+                                }
+                                var solarMPP_l0 = scaleCol(baseSolar_l0.values, solarDCMulti);
+                            } else {
+                                if (baseSolarInverter > 0) {
+                                    var solarACMulti = solarInverterCapacity / baseSolarInverter;
+                                } else {
+                                    var solarACMulti = 0;
+                                }
+                                solarAC_l1 = scaleCol(baseSolar_l1.values, solarACMulti);
+                            }
+                        }
+                        if (windEnabled) {
+                            if (baseWind > 0) {
+                                var windACMulti = windCapacity / baseWind;
+                            } else {
+                                var windACMulti = 0;
+                            }
+                            windAC_l1 = scaleCol(baseWind_l1.values, windACMulti);
+                        }
+                        // Set simulation parameters
+                        var pars = inputs;
+                        var solar_l0 = solarMPP_l0;
+                        var solar_l1 = solarAC_l1;
+                        var wind_l1 = windAC_l1;
+                        var load_l3 = load_l3;
+                        var useCap = 1;
+                        // Run simulation
+                        var yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
+                            appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
+                            wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
+                            monTable1, monTable2, monTable3, useCap);
+                        var data8760 = yearSim[0];
+                        var data8760Yr1 = data8760;
+                        // var outMonTable1 = yearSim[1];
+                        // var outMonTable2 = yearSim[2];
+                        // var outMonTable3 = yearSim[3];
+                        // Temp outputs
+                        var outTempTable1 = yearSim[1];
+                        var outTempTable2 = yearSim[2];
+                        var outTempTable3 = yearSim[3];
+
+                        // Calculate degradation for the life of the project
+                        var battDischargeArray = yearSim[4];
+                        var battSOCArray = yearSim[5];
+                        var period = 1;
+                        var battDegradation = calcProjectBattCap(period, battDischargeArray, battSOCArray, battChem, isManualDeg, manualAugTable, augSchedule, oversize, battCutOff, inputs);
+                        var systemCapacity = battDegradation[0];
+                        var useableCapacity = battDegradation[1];
+                        var outDegTableValues = listToMatrix(systemCapacity, useableCapacity);
+                        // Write output
+                        // Disable excel calculations untill next at then end of the function
+                        var app = context.workbook.application;
+                        app.suspendApiCalculationUntilNextSync();
+                        outDataTable.values = data8760Yr1;
+                        outDegTable.values = outDegTableValues;
+                    } else {
+                        // Set simulation parameters
+                        if (solarEnabled) {
+                            if (mppEnabled) {
+                                if (baseSolar > 0) {
+                                    var solarDCMulti = panelCapacity / baseSolar * (Math.pow((1 - solarAnnualDeg), year - 1));
+                                } else {
+                                    var solarDCMulti = 0;
+                                }
+                                if (year > solarLife) {
+                                    var solarDCMulti = 0;
+                                }
+                                var solarMPP_l0 = scaleCol(baseSolar_l0.values, solarDCMulti);
+                            } else {
+                                if (baseSolarInverter > 0) {
+                                    var solarACMulti = solarInverterCapacity / baseSolarInverter * (Math.pow((1 - solarAnnualDeg), year - 1));
+                                } else {
+                                    var solarACMulti = 0;
+                                }
+                                if (year > solarLife) {
+                                    var solarACMulti = 0;
+                                }
+                                solarAC_l1 = scaleCol(baseSolar_l1.values, solarACMulti);
+                            }
+                        }
+                        if (windEnabled) {
+                            if (baseWind > 0) {
+                                var windACMulti = windCapacity / baseWind * (Math.pow((1 - windAnnualDeg), year - 1));
+                            } else {
+                                var windACMulti = 0;
+                            }
+                            if(year > windLife) {
+                                var windACMulti = 0;
+                            }
+                            windAC_l1 = scaleCol(baseWind_l1.values, windACMulti);
+                        }
+                        // Set simulation parameters
+                        var pars = inputs;
+                        var solar_l0 = solarMPP_l0;
+                        var solar_l1 = solarAC_l1;
+                        var wind_l1 = windAC_l1;
+                        var load_l3 = load_l3;
+                        // Update battery energy storage capacity
+                        var capTableY1 = outDegTable.values;
+                        if (year > battLife) {
+                            battEnabled = false;
+                            inputs["Battery enabled"] = 0;
+                        } else {
+                            useCap = capTableY1[year - 1][1];
+                        }
+                        // Run simulation
+                        yearSim = simulateYear(year, pars, time, monthSeries, hourSeries, solar_l0, solar_l1, wind_l1, load_l3, appDefTable,
+                            appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
+                            wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable,
+                            monTable1, monTable2, monTable3, useCap);
+                        data8760 = yearSim[0];
+                        // var outMonTable1_yr = yearSim[1];
+                        // var outMonTable2_yr = yearSim[2];
+                        // var outMonTable3_yr = yearSim[3];
+                        // Concatenate results
+                        // outMonTable1 = concatYear(outMonTable1, outMonTable1_yr);
+                        // outMonTable2 = concatYear(outMonTable2, outMonTable2_yr);
+                        // outMonTable3 = concatYear(outMonTable3, outMonTable3_yr);
+                        // Temp outputs
+                        var outTempTable1 = yearSim[1];
+                        var outTempTable2 = yearSim[2];
+                        var outTempTable3 = yearSim[3];
+
+                        if (year < 40) {
+                            context.application.calculationMode = Excel.CalculationMode.manual;
+                        } else {
+                            context.application.calculationMode = Excel.CalculationMode.automatic;
+                        }
+                    }
+
+                } else {
+                    // outMonTable1 = concatYear(outMonTable1, emptyTable1);
+                    // outMonTable2 = concatYear(outMonTable2, emptyTable2);
+                    // outMonTable3 = concatYear(outMonTable3, emptyTable3);
+
+                }
+
+                var loopEnd = performance.now()
+                // Disable excel calculations untill next at then end of the function
+                var app = context.workbook.application;
+                app.suspendApiCalculationUntilNextSync();
+                tempMonTable1.values = outTempTable1;
+                tempMonTable2.values = outTempTable2;
+                tempMonTable3.values = outTempTable3;
+                console.log("Year: " + year.toString() + " : " + (Math.round((loopEnd - loopStart))).toString() + " ms")
+
+            }
+        }
+    })
+}
+
+var outMonTable1,    outMonTable2,    outMonTable3,    emptyTable1 ,    emptyTable2,    emptyTable3,
+    systemCapacity, useableCapacity, solar_l0, solar_l1, outDataTable, mode8760, data8760, monTable1, monTable2, monTable3, monthSeries, hourSeries, startReading, mode, augSchedule,
+    battCutOff, oversize, isManualDeg, manualAugTable, battChem, solarLife, windLife, battLife, inputSheet, genSheet, outSheet,
+    appSheet, battSheet, solarAnnualDeg, windAnnualDeg, dispatchSheet, inputTable, baseSolar_l0, baseSolar_l1, baseWind_l1,
+    baseLoad_l3, time, appDefTable, appAllDayTable, ept_wd, ept_we, cpt_wd, cpt_we, solar_ppa_wd, solar_ppa_we, wind_ppa_wd,
+    wind_ppa_we, dispatchTable, useDefTable, usePowTable, battStateTable, solarPPA, windPPA, sampleOutput, sampleOuput_5,
+    outputAnnualSummary, inputs, i, numTimestamps, solarEnabled, mppEnabled, inverterEnabled, windEnabled, genEnabled, battEnabled,
+    limitedLoad, ac, curtailSrc, curtailSolar, chargeSrc, chargeSolar, chargeWind, chargeSolarPlusWind, poiLineLoss_math, poiLimit,
+    poiXfmrOverride, poiXfmrOverrideVal, poiXfmrNum, solarPPAMethod, windPPAMethod, solarPPAFixed, windPPAFixed, solarPPAPrice,
+    windPPAPrice, fixedPPA, ppaPrice, baseSolar, baseSolarInverter, panelCapacity, solarInverterCapacity, solarXfmrNum,
+    solarLineLoss_math, solarXfmrOverride, solarXfmrOverrideVal, solarInvOverride, solarInvOverrideVal, baseWind, windCapacity,
+    windLineLoss_math, windXfmrNum, windXfmrOverride, windXfmrOverrideVal, battLineLoss_math, battXfmrNum, battPowerPOI, battEnergyPOI,
+    battPower, battEnergy, nConvert, startRatio, fullRenewCharge, buffer, battXfmrOverride, battXfmrOverrideVal, battInvOverride,
+    battInvOverrideVal, battConvOverride, battConvOverrideVal, battDisEffOverride, battDisEffOverrideVal, battChaEffOverride,
+    battChaEffOverrideVal, battDisEff_math, battChaEff_math, solarLineEff, windLineEff, battLineEff, battLineEff, poiLineEff,
+    poiXfmrEff_math, battBOSEff, ratedSolarEff, ratedWindEff, ratedBattEff, ratedBattEff, battChargeEnergy, useCaseCodes, usedApps,
+    ppa, poiLimitArray, siteOutput_l3, netBattPOI_l3, netSolarPOI_l3, netWindPOI_l3, battChaSolarDC_l0, battChaSolarAC_l2,
+    battChaWind_l2, battDisPOI_l3, battChaPOI_l3, annualOut, dayOfYear, start, solarMPP_l0, solarAC_l1, solarAC_l2, solarAC_l3,
+    pvs_DCCoupled_l2, windAC_l1, windAC_l2, windAC_l3, solarClipMPP_l0, solarClipAC_l2, windClipAC_l2, totalClipAC_l2, dayClipAC_l2,
+    dayGenAC_l2, daySolarClipMPP_l0, daySolarMPP_l0, daySolarAC_l2, dayWindAC_l2, daySolarClipAC_l2, dayWindClipAC_l2, solarOnlyInvEff,
+    solarOnlyXfmrEff, pvsInvEff, pvsXfmrEff, windXfmrEff, endReading, i, vNow, vMonth, vHour, vDay, vWeekend, diff, oneDay, day,
+    vUseCaseCode, vPPA, vPPA, vPPA, vPOILimit, vSolarPowerRatio, vWindPowerRatio, vSolarOnlyAC, vWindGen, vMPPGen_l0, vInvEff,
+    vSolarAC_l1, vSolarClipMPP_l0, vMPPGen_l0, vSolarAC_l1, vSolarClipMPP_l0, vXfmrEff, vSolarAC_l2, vWindGen_l1, vXfmrEff,
+    vWindAC_l2, vPotentialSolar_l3, vPotetialWind_l3, vSolarLimit, vWindLimit, vWindLimit, vSolarLimit, vCombinedPowerRatio,
+    vPOIRouteEff, vSolarAC_l3, vWindAC_l3, vSolarClipAC_l2, vWindClipAC_l2, acClipByDay_l2, acGenByDay_l2, dcClipByDay_l0, dcGenByDay_l0,
+    acSolarByDay_l2, acWindByDay_l2, acWindClipByDay_l2, acSolarClipByDay_l2, i, d, i, d_1, netDischarge_l0, netGrdCharge_l0,
+    netAutCharge_l0, solarCharge_l0, solarCharge_l2, windCharge_l2, grdCharge_l3, netCharge_l0, socHE, socHS, socPercentHE,
+    chaEff, disEff, appCodes, appThr_l3, appCap, appThr_l2, appThr_l0, appThr_Plan_l0, appCap_Plan, appType, appPriceSrc,
+    appITCQual, enePrice, capPrice, startCycleCount, startSOC, battCapMulti, cumCycles, battEffLoss, battIdleLoad, battState,
+    i, now, month, hour, day, weekend, vSolarMPP_l0, vSolarAC_l2, vWindAC_l2, vUseNum, aAppCodes, aAppCap_Plan, aAppThr_Plan_l0,
+    aAppCap, aAppThr_l0, aAppThr_l2, aAppThr_l3, aAppType, aAppPriceSrc, aAppITCQual, aEnePrice, aCapPrice, vGeneration, vPOILimit,
+    vBattSOCHS, vBattSOCHS, vNetDisThr_l0, vNetChaThr_l0, vMaxDis_l0, vMaxCha_l0, vStackLen, j, vAppThr_Plan_l0, vAppThr_l0, vAppCap,
+    vAppThr_l0, vAppCap, vAppThr_l0, vAppCap, vCapPrice, vEnePrice, vEnePrice, vCapPrice, vEnePrice, vEnePrice, vThisDaySolarClipAC_l2,
+    vThisDaySolarClipDC_l0, vThisDayWindClipAC_l2, vThisDaySolarDC_l0, vThisDaySolarAC_l2, vThisDayWindAC_l2, vThisHourSolarAC_l2,
+    vThisHourSolarDC_l0, vThisHourWindAC_l2, vThisHourSolarClipAC_l2, vThisHourSolarClipDC_l0, vThisHourWindClipAC_l2, vSolarTarget,
+    vWindTarget, vSolarTarget, vWindTarget, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0,
+    vAutoChargeWind_l0, vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargeWind_l0, vAutoChargePV_l0,
+    vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2,
+    vAutoChargeWind_l2, vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l0, vAutoChargeWind_l2,
+    vAutoChargePV_l2, vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoChargePV_l2, vAutoChargeWind_l0, vAutoChargePV_l2,
+    vAutoChargeWind_l2, vAutoChargePV_l0, vAutoChargeWind_l0, vAutoCharge_l0, vAutoCharge_l0, vDisPower_l0, vBattDisEff, vDisPowerRatio,
+    vBattDisEff, vChaPower_l0, vBattChaEff, vChaPowerRatio, vBattChaEff, vBattSOCHE, vBattEffLoss, vBattIdleLoad, vPVS_l0, vPVS_l1,
+    vPVS_l2, vBattNetThr_l0, vBattNetPowerRatio, vBattInv, vBattNetThr_l1, vXfmrEff, vACCoupledBattNetThr_l2, vBattNetThr_l1, vXfmrEff,
+    vACCoupledBattNetThr_l2, vBattDis_l1, vXfmrEff, vBattDis_l2, vBattChaGrd_l1, vBattChaGrd_l2, vSiteOutput_l2, vSitePowerLevel,
+    vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3,
+    vBattdis, vOptConvRatio, vConvEff, vBattDis_l0, vPVS_l0, vPVSPowerRatio, vInvEff, vXfmrEff, vPVS_l1, vPVS_l2, vACCoupledBattNetThr_l2,
+    vBattDis_l1, vBattDis_l2, vBattChaGrd_l1, vBattCha_l2, vSiteOutput_l2, vSitePowerLevel, vXfmrEff_site, vSiteOutput_l3, vSitePowerLevel,
+    vXfmrEff_site, vSiteOutput_l3, vNetSolar_l0, vInvEff, vXfmrEff, vNetSolar_l1, vNetSolar_l2, vNetSolar_l3, vNetWind_l2, vNetWind_l3,
+    vBattDis_l3, vBattChaGrd_l3, solarPPARev, windPPARev, endSimulation;

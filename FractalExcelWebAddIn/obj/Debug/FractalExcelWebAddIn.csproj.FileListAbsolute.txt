@@ -1,0 +1,6 @@
+C:\Fractal Model Dev\Git clone 200716\fractal\FractalExcelWebAddIn\FractalExcelWebAddIn\obj\Debug\FractalExcelWebAddIn.csprojAssemblyReference.cache
+C:\Users\dougs\Downloads\Fractal Model S (1)\FractalExcelWebAddIn\obj\Debug\FractalExcelWebAddIn.csproj.CoreCompileInputs.cache
+C:\Users\dougs\Documents\GitHub\Fractal-Model-S\FractalExcelWebAddIn\obj\Debug\FractalExcelWebAddIn.csproj.CoreCompileInputs.cache
+C:\Users\dougs\Documents\GitHub\Fractal-Model-S\FractalExcelWebAddIn\obj\Debug\FractalExcelWebAddIn.csprojAssemblyReference.cache
+C:\Users\rahul\Fractal Dropbox\Rahul Verma\Fractal Model GitHub\Fractal-Model-X\FractalExcelWebAddIn\obj\Debug\FractalExcelWebAddIn.csprojAssemblyReference.cache
+C:\Users\rahul\Fractal Dropbox\Rahul Verma\Fractal Model GitHub\Fractal-Model-X\FractalExcelWebAddIn\obj\Debug\FractalExcelWebAddIn.csproj.CoreCompileInputs.cache

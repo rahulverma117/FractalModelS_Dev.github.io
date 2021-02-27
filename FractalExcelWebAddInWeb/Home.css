@@ -2,7 +2,8 @@
 
 html {
     position: relative;
-    min-height: 100%;
+    min-height: 90%;
+    font-family: Arial;
 }
 body {
     margin: 0 0 40px; /* bottom = footer height */
@@ -11,8 +12,7 @@ body {
 .header {
    
     left: 0;
-    bottom: 0;
- 
+    bottom: 0; 
     width: 100%;
     border-bottom: 1px solid black;
     text-align: center;
@@ -25,13 +25,23 @@ body {
     font-size: large;
 }
 
+.content span {
+    font-family: Arial;
+    text-align: left;
+  
+}
+
+.content {
+    padding-top: 5px;
+    padding: 15px  15px  15px  15px;
+}
+
 .logo {
     background: url("Images/logo.png");
     height: 80px; /* You must set a specified height */
     background-size: 50%;
     background-position: center; /* Center the image */
     background-repeat: no-repeat; /* Do not repeat the image */
-
 }
 
 #myLog {
@@ -41,19 +51,45 @@ body {
     font-size: small;
 }
 
-.content
-{
-    text-align: center;
+.login {
+    align-content: center;
+    margin: 5px;
+    padding: 5px;
+    width: 50%;
+    margin: 0 auto;
 }
 
 .content button {
+    margin-top: 5px;
+    margin-bottom: 5px;
     padding: 5px;
     font-family: Arial;
     font-weight: bold;
+    margin: 5px;
+    min-width: 100px;
+}
+.tabcontent {
+    animation: fadeEffect 1s; /* Fading effect takes 1 second */
 }
 
+/* Go from zero to full opacity */
+@keyframes fadeEffect {
+    from {
+        opacity: 0;
+    }
 
-
+    to {
+        opacity: 1;
+    }
+}
+label {
+    width: 100px;     
+    display: block;
+}
+input {
+    width: 200px;    
+    display: block;
+}
 .footer {
     position: absolute;
     left: 0;
@@ -71,5 +107,50 @@ body {
 .padding {
     padding: 15px;
 }
+.error
+{
+    margin: 5px;
+}
+.buttons {
+    align-content: center;
+    width: 50%;
+    margin: 0 20% 0 20%;
+}
+.wideButton
+{
+    width: 200px;
+}
 
- 
+/* Style the tab */
+.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+    background-color: #ccc;
+}
+
+/* Style the tab content */
+.tabcontent {
+    display: none;    
+    border: none;
+}
