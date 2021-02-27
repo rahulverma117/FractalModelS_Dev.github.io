@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<package xmlns:dm0="http://schemas.microsoft.com/VisualStudio/2008/DslTools/Core" dslVersion="1.0.0.0" Id="05681f83-1c9d-4921-929c-cbbda51b1ba5" solutionId="9bfafe2d-b0da-4e87-80cb-982aeb2d458c" resetWebServer="false" sharePointProductVersion="15.0" name="FractalExcelWebAddIn" xmlns="http://schemas.microsoft.com/VisualStudio/2008/SharePointTools/PackageModel">
-  <features>
-    <featureReference itemId="458d51f7-24d6-4f2a-962e-49096e5c9a1c" />
-  </features>
-</package>

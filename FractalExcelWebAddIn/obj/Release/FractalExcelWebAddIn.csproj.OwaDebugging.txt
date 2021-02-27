@@ -1,7 +1,0 @@
-False
-458d51f7-24d6-4f2a-962e-49096e5c9a1c05681f83-1c9d-4921-929c-cbbda51b1ba5
-{b613bb6b-cb1b-46e6-af1d-03ce564cfcbb}{08ce60c9-a11c-4cd2-81d2-752412a48409}
-{efb20b5e-54f0-4757-9a45-10549cc658d5}
-1.0.0.0
-FractalExcelWebAddIn
-_layouts/15/

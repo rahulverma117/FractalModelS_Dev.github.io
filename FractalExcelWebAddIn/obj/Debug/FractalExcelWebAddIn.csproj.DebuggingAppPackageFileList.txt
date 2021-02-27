@@ -1,2 +1,0 @@
-bin\Debug\OfficeAppManifests\FractalExcelWebAddInManifest.xml
-C:\Users\rahul\Fractal Dropbox\Rahul Verma\Fractal Model GitHub\Fractal-Model-X\FractalExcelWebAddIn\bin\Debug\FractalExcelWebAddIn.debugapp

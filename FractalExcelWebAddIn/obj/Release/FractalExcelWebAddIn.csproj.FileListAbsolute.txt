@@ -1,2 +1,0 @@
-C:\Users\dougs\Documents\GitHub\Fractal-Model-S\FractalExcelWebAddIn\obj\Release\FractalExcelWebAddIn.csprojAssemblyReference.cache
-C:\Users\dougs\Documents\GitHub\Fractal-Model-S\FractalExcelWebAddIn\obj\Release\FractalExcelWebAddIn.csproj.CoreCompileInputs.cache
